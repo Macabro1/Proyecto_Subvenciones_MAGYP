@@ -1,15 +1,24 @@
+import os
 from flask import Flask, render_template, request, redirect, url_for
 from flask_sqlalchemy import SQLAlchemy
 
 app = Flask(__name__)
 
 # ---------------- CONFIGURACIÓN BD ----------------
-app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///subvenciones.db"
+database_url = os.getenv("DATABASE_URL")
+
+if database_url:
+    # 🔥 Para Render (PostgreSQL)
+    app.config["SQLALCHEMY_DATABASE_URI"] = database_url
+else:
+    # 💻 Para tu PC (SQLite)
+    app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///subvenciones.db"
+
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 db = SQLAlchemy(app)
 
-# 🔥 CREAR BD AUTOMÁTICAMENTE (IMPORTANTE PARA RENDER)
+# 🔥 CREAR BD AUTOMÁTICAMENTE
 with app.app_context():
     db.create_all()
 
