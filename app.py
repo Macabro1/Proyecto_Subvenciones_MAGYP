@@ -18,8 +18,9 @@ app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 db = SQLAlchemy(app)
 
-# 🔥 CREAR BD AUTOMÁTICAMENTE
-with app.app_context():
+# 🔥 Crear tablas automáticamente cuando arranca la app
+@app.before_first_request
+def crear_tablas():
     db.create_all()
 
 
