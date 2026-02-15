@@ -8,6 +8,10 @@ app = Flask(__name__)
 database_url = os.getenv("DATABASE_URL")
 
 if database_url:
+    # Render usa postgres:// y SQLAlchemy necesita postgresql://
+    if database_url.startswith("postgres://"):
+        database_url = database_url.replace("postgres://", "postgresql://", 1)
+
     app.config["SQLALCHEMY_DATABASE_URI"] = database_url
 else:
     app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///subvenciones.db"
@@ -23,11 +27,6 @@ class Solicitud(db.Model):
     cedula = db.Column(db.String(10), nullable=False)
     subvencion = db.Column(db.String(50), nullable=False)
     estado = db.Column(db.String(20), default="En revisión")
-
-
-# 🔥 CREAR TABLAS (compatible con Render)
-with app.app_context():
-    db.create_all()
 
 
 # ---------------- RUTA PRINCIPAL ----------------
@@ -102,5 +101,9 @@ def cambiar_estado(id, nuevo_estado):
     return redirect(url_for("listar_solicitudes"))
 
 
+# 🔥 CREAR TABLAS SOLO EN LOCAL (NO en Render)
 if __name__ == "__main__":
+    with app.app_context():
+        db.create_all()
+
     app.run(debug=True)
