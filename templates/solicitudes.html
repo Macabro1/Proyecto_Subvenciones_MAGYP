@@ -1,0 +1,25 @@
+<table class="table table-bordered table-striped">
+    <thead class="table-success">
+        <tr>
+            <th>ID</th>
+            <th>Cédula</th>
+            <th>Subvención</th>
+            <th>Estado</th>
+            <th>Acciones</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for s in solicitudes %}
+        <tr>
+            <td>{{ s.id }}</td>
+            <td>{{ s.cedula }}</td>
+            <td>{{ s.subvencion }}</td>
+            <td>{{ s.estado }}</td>
+            <td>
+                <a href="/estado/{{ s.id }}/Aprobado" class="btn btn-success btn-sm">Aprobar</a>
+                <a href="/estado/{{ s.id }}/Rechazado" class="btn btn-danger btn-sm">Rechazar</a>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>

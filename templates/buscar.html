@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Buscar solicitudes</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+
+<body class="bg-light">
+
+<div class="container mt-5">
+
+    <h2 class="mb-4">Buscar por cédula</h2>
+
+    <!-- FORMULARIO -->
+    <form method="POST" class="mb-4">
+        <div class="input-group">
+            <input type="text" name="cedula" class="form-control" placeholder="Ingrese cédula" required>
+            <button class="btn btn-success">Buscar</button>
+        </div>
+    </form>
+
+    <!-- RESULTADOS -->
+    {% if resultados %}
+    <table class="table table-bordered">
+        <thead class="table-success">
+            <tr>
+                <th>ID</th>
+                <th>Cédula</th>
+                <th>Subvención</th>
+                <th>Estado</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for s in resultados %}
+            <tr>
+                <td>{{ s.id }}</td>
+                <td>{{ s.cedula }}</td>
+                <td>{{ s.subvencion }}</td>
+                <td>{{ s.estado }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+
+    <a href="/" class="btn btn-secondary">Volver al inicio</a>
+
+</div>
+
+</body>
+</html>
