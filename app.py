@@ -8,20 +8,13 @@ app = Flask(__name__)
 database_url = os.getenv("DATABASE_URL")
 
 if database_url:
-    # 🔥 Para Render (PostgreSQL)
     app.config["SQLALCHEMY_DATABASE_URI"] = database_url
 else:
-    # 💻 Para tu PC (SQLite)
     app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///subvenciones.db"
 
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 db = SQLAlchemy(app)
-
-# 🔥 Crear tablas automáticamente cuando arranca la app
-@app.before_first_request
-def crear_tablas():
-    db.create_all()
 
 
 # ---------------- MODELO ----------------
@@ -30,6 +23,11 @@ class Solicitud(db.Model):
     cedula = db.Column(db.String(10), nullable=False)
     subvencion = db.Column(db.String(50), nullable=False)
     estado = db.Column(db.String(20), default="En revisión")
+
+
+# 🔥 CREAR TABLAS (compatible con Render)
+with app.app_context():
+    db.create_all()
 
 
 # ---------------- RUTA PRINCIPAL ----------------
@@ -56,7 +54,6 @@ def index():
     )
 
 
-# ---------------- FORMULARIO ----------------
 @app.route("/solicitar", methods=["GET", "POST"])
 def solicitar():
     if request.method == "POST":
@@ -72,20 +69,17 @@ def solicitar():
     return render_template("solicitar.html")
 
 
-# ---------------- PÁGINA DE ÉXITO ----------------
 @app.route("/exito")
 def exito():
-    return "<h2>✅ Solicitud guardada correctamente</h2><a href='/'>Volver al inicio</a>"
+    return "<h2>✅ Solicitud guardada correctamente</h2><a href='/'>Volver</a>"
 
 
-# ---------------- LISTA DE SOLICITUDES ----------------
 @app.route("/solicitudes")
 def listar_solicitudes():
     lista = Solicitud.query.all()
     return render_template("solicitudes.html", solicitudes=lista)
 
 
-# ---------------- BUSCAR POR CÉDULA ----------------
 @app.route("/buscar", methods=["GET", "POST"])
 def buscar():
     resultados = []
@@ -97,7 +91,6 @@ def buscar():
     return render_template("buscar.html", resultados=resultados)
 
 
-# ---------------- CAMBIAR ESTADO ----------------
 @app.route("/estado/<int:id>/<nuevo_estado>")
 def cambiar_estado(id, nuevo_estado):
     solicitud = Solicitud.query.get_or_404(id)
@@ -109,6 +102,5 @@ def cambiar_estado(id, nuevo_estado):
     return redirect(url_for("listar_solicitudes"))
 
 
-# ---------------- EJECUCIÓN LOCAL ----------------
 if __name__ == "__main__":
     app.run(debug=True)
