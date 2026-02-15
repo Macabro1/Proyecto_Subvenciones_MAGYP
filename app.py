@@ -9,6 +9,10 @@ app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 db = SQLAlchemy(app)
 
+# 🔥 CREAR BD AUTOMÁTICAMENTE (IMPORTANTE PARA RENDER)
+with app.app_context():
+    db.create_all()
+
 
 # ---------------- MODELO ----------------
 class Solicitud(db.Model):
@@ -95,13 +99,6 @@ def cambiar_estado(id, nuevo_estado):
     return redirect(url_for("listar_solicitudes"))
 
 
-# ---------------- CREAR BD ----------------
-@app.route("/initdb")
-def initdb():
-    db.create_all()
-    return "Base de datos creada."
-
-
-# ---------------- EJECUCIÓN ----------------
+# ---------------- EJECUCIÓN LOCAL ----------------
 if __name__ == "__main__":
     app.run(debug=True)
