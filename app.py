@@ -27,8 +27,13 @@ class Solicitud(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     cedula = db.Column(db.String(10), nullable=False)
     subvencion = db.Column(db.String(50), nullable=False)
-    tipo_bono = db.Column(db.String(20), nullable=False)   # 🔥 NUEVO CAMPO
+    tipo_bono = db.Column(db.String(20), nullable=False)
     estado = db.Column(db.String(20), default="En revisión")
+
+
+# 🔥 CREAR TABLAS SI NO EXISTEN (FUNCIONA EN LOCAL Y RENDER)
+with app.app_context():
+    db.create_all()
 
 
 # ---------------- RUTA PRINCIPAL ----------------
@@ -61,7 +66,7 @@ def solicitar():
     if request.method == "POST":
         cedula = request.form["cedula"]
         tipo = request.form["subvencion"]
-        tipo_bono = request.form["tipo_bono"]  # 🔥 NUEVO CAMPO
+        tipo_bono = request.form["tipo_bono"]
 
         nueva = Solicitud(
             cedula=cedula,
@@ -120,9 +125,6 @@ def about():
     return render_template("about.html")
 
 
-# 🔥 CREAR TABLAS SOLO EN LOCAL (NO en Render)
+# ---------------- EJECUCIÓN LOCAL ----------------
 if __name__ == "__main__":
-    with app.app_context():
-        db.create_all()
-
     app.run(debug=True)
