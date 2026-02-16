@@ -2,6 +2,7 @@ import os
 from flask import Flask, render_template, request, redirect, url_for
 from flask_sqlalchemy import SQLAlchemy
 
+# ---------------- CREAR APP ----------------
 app = Flask(__name__)
 
 # ---------------- CONFIGURACIÓN BD ----------------
@@ -14,16 +15,19 @@ if database_url:
 
     app.config["SQLALCHEMY_DATABASE_URI"] = database_url
 else:
-    # Base de datos local
+    # Base de datos local SQLite
     app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///subvenciones.db"
 
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
+# ---------------- INICIALIZAR BD ----------------
 db = SQLAlchemy(app)
 
 
 # ---------------- MODELO ----------------
 class Solicitud(db.Model):
+    __tablename__ = "solicitud"
+
     id = db.Column(db.Integer, primary_key=True)
     cedula = db.Column(db.String(10), nullable=False)
     subvencion = db.Column(db.String(50), nullable=False)
@@ -31,7 +35,7 @@ class Solicitud(db.Model):
     estado = db.Column(db.String(20), default="En revisión")
 
 
-# 🔥 CREAR TABLAS SI NO EXISTEN (FUNCIONA EN LOCAL Y RENDER)
+# ---------------- CREAR TABLAS (LOCAL Y RENDER) ----------------
 with app.app_context():
     db.create_all()
 
@@ -47,8 +51,13 @@ def index():
         {"nombre": "Crédito Productivo", "tipo": "credito"},
     ]
 
+    try:
+        total = Solicitud.query.count()
+    except Exception:
+        total = 0  # evita error si la BD está vacía o recién creada
+
     estadisticas = {
-        "solicitantes_registrados": Solicitud.query.count(),
+        "solicitantes_registrados": total,
     }
 
     return render_template(
@@ -71,7 +80,7 @@ def solicitar():
         nueva = Solicitud(
             cedula=cedula,
             subvencion=tipo,
-            tipo_bono=tipo_bono
+            tipo_bono=tipo_bono,
         )
 
         db.session.add(nueva)
@@ -85,7 +94,7 @@ def solicitar():
 # ---------------- MENSAJE DE ÉXITO ----------------
 @app.route("/exito")
 def exito():
-    return "<h2>✅ Solicitud guardada correctamente</h2><a href='/'>Volver</a>"
+    return "<h2>✅ Solicitud guardada correctamente</h2><a href='/'>Volver al inicio</a>"
 
 
 # ---------------- LISTAR SOLICITUDES ----------------
