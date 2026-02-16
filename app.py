@@ -14,6 +14,7 @@ if database_url:
 
     app.config["SQLALCHEMY_DATABASE_URI"] = database_url
 else:
+    # Base de datos local
     app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///subvenciones.db"
 
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
@@ -26,6 +27,7 @@ class Solicitud(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     cedula = db.Column(db.String(10), nullable=False)
     subvencion = db.Column(db.String(50), nullable=False)
+    tipo_bono = db.Column(db.String(20), nullable=False)   # 🔥 NUEVO CAMPO
     estado = db.Column(db.String(20), default="En revisión")
 
 
@@ -53,13 +55,20 @@ def index():
     )
 
 
+# ---------------- SOLICITAR SUBVENCIÓN ----------------
 @app.route("/solicitar", methods=["GET", "POST"])
 def solicitar():
     if request.method == "POST":
         cedula = request.form["cedula"]
         tipo = request.form["subvencion"]
+        tipo_bono = request.form["tipo_bono"]  # 🔥 NUEVO CAMPO
 
-        nueva = Solicitud(cedula=cedula, subvencion=tipo)
+        nueva = Solicitud(
+            cedula=cedula,
+            subvencion=tipo,
+            tipo_bono=tipo_bono
+        )
+
         db.session.add(nueva)
         db.session.commit()
 
@@ -68,17 +77,20 @@ def solicitar():
     return render_template("solicitar.html")
 
 
+# ---------------- MENSAJE DE ÉXITO ----------------
 @app.route("/exito")
 def exito():
     return "<h2>✅ Solicitud guardada correctamente</h2><a href='/'>Volver</a>"
 
 
+# ---------------- LISTAR SOLICITUDES ----------------
 @app.route("/solicitudes")
 def listar_solicitudes():
     lista = Solicitud.query.all()
     return render_template("solicitudes.html", solicitudes=lista)
 
 
+# ---------------- BUSCAR POR CÉDULA ----------------
 @app.route("/buscar", methods=["GET", "POST"])
 def buscar():
     resultados = []
@@ -90,6 +102,7 @@ def buscar():
     return render_template("buscar.html", resultados=resultados)
 
 
+# ---------------- CAMBIAR ESTADO ----------------
 @app.route("/estado/<int:id>/<nuevo_estado>")
 def cambiar_estado(id, nuevo_estado):
     solicitud = Solicitud.query.get_or_404(id)
@@ -99,6 +112,12 @@ def cambiar_estado(id, nuevo_estado):
         db.session.commit()
 
     return redirect(url_for("listar_solicitudes"))
+
+
+# ---------------- PÁGINA ABOUT ----------------
+@app.route("/about")
+def about():
+    return render_template("about.html")
 
 
 # 🔥 CREAR TABLAS SOLO EN LOCAL (NO en Render)

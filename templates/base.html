@@ -2,12 +2,60 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Subvenciones MAG</title>
+    <title>Sistema de Subvenciones MAGP</title>
+
+    <!-- Bootstrap -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- CSS propio -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
-<body>
+
+<body class="bg-light">
+
+<!-- 🔵 NAVBAR -->
+<nav class="navbar navbar-expand-lg navbar-dark bg-success">
     <div class="container">
-        {% block content %}{% endblock %}
+
+        <a class="navbar-brand fw-bold" href="/">Subvenciones MAG</a>
+
+        <div class="collapse navbar-collapse show">
+            <ul class="navbar-nav ms-auto">
+
+                <li class="nav-item">
+                    <a class="btn btn-outline-light me-2" href="/">Inicio</a>
+                </li>
+
+                <li class="nav-item">
+                    <a class="btn btn-light text-success me-2" href="/solicitar">Solicitar</a>
+                </li>
+
+                <li class="nav-item">
+                    <a class="btn btn-warning text-dark me-2" href="/solicitudes">Solicitudes</a>
+                </li>
+
+                <li class="nav-item">
+                    <a class="btn btn-info text-white me-2" href="/buscar">Buscar</a>
+                </li>
+
+                <li class="nav-item">
+                    <a class="btn btn-secondary" href="/about">Acerca de</a>
+                </li>
+
+            </ul>
+        </div>
     </div>
+</nav>
+
+<!-- 🔵 CONTENIDO -->
+<div class="container mt-4">
+    {% block content %}{% endblock %}
+</div>
+
+<!-- 🔵 FOOTER -->
+<footer class="bg-dark text-white text-center py-3 mt-5">
+    © 2026 Ministerio de Agricultura, Ganadería y Pesca - Ecuador
+</footer>
+
 </body>
 </html>

@@ -1,17 +1,18 @@
-{% extends 'base.html' %}
+{% extends "base.html" %}
 
 {% block content %}
-<h1>Sistema de Subvenciones</h1>
 
-<a href="/solicitar">
-    <button class="btn btn-success">Registrar solicitud</button>
-</a>
+<h1 class="mb-3">Sistema de Subvenciones</h1>
+<p>Registro y consulta de subvenciones agrícolas en Ecuador</p>
 
-<a href="/solicitudes">
-    <button class="btn btn-primary">Ver solicitudes registradas</button>
-</a>
+<h3 class="mt-4">Subvenciones disponibles</h3>
+<ul>
+    {% for s in subvenciones %}
+        <li>{{ s.nombre }} ({{ s.tipo }})</li>
+    {% endfor %}
+</ul>
 
-<a href="/buscar">
-    <button class="btn btn-warning">Buscar por cédula</button>
-</a>
+<h3 class="mt-4">Estadísticas</h3>
+<p>Solicitantes registrados: {{ estadisticas.solicitantes_registrados }}</p>
+
 {% endblock %}
