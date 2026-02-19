@@ -9,7 +9,7 @@ app = Flask(__name__)
 database_url = os.getenv("DATABASE_URL")
 
 if database_url:
-    # Render usa postgres:// y SQLAlchemy necesita postgresql://
+    # Render a veces usa postgres:// y SQLAlchemy necesita postgresql://
     if database_url.startswith("postgres://"):
         database_url = database_url.replace("postgres://", "postgresql://", 1)
 
@@ -23,7 +23,6 @@ app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 # ---------------- INICIALIZAR BD ----------------
 db = SQLAlchemy(app)
 
-
 # ---------------- MODELO ----------------
 class Solicitud(db.Model):
     __tablename__ = "solicitud"
@@ -34,11 +33,10 @@ class Solicitud(db.Model):
     tipo_bono = db.Column(db.String(20), nullable=False)
     estado = db.Column(db.String(20), default="En revisión")
 
-
-# ---------------- CREAR TABLAS (LOCAL Y RENDER) ----------------
-with app.app_context():
+# ---------------- CREAR TABLAS AUTOMÁTICAMENTE ----------------
+@app.before_request
+def crear_tablas():
     db.create_all()
-
 
 # ---------------- RUTA PRINCIPAL ----------------
 @app.route("/")
@@ -54,7 +52,7 @@ def index():
     try:
         total = Solicitud.query.count()
     except Exception:
-        total = 0  # evita error si la BD está vacía o recién creada
+        total = 0
 
     estadisticas = {
         "solicitantes_registrados": total,
@@ -67,7 +65,6 @@ def index():
         subvenciones=subvenciones,
         estadisticas=estadisticas,
     )
-
 
 # ---------------- SOLICITAR SUBVENCIÓN ----------------
 @app.route("/solicitar", methods=["GET", "POST"])
@@ -90,19 +87,16 @@ def solicitar():
 
     return render_template("solicitar.html")
 
-
 # ---------------- MENSAJE DE ÉXITO ----------------
 @app.route("/exito")
 def exito():
     return "<h2>✅ Solicitud guardada correctamente</h2><a href='/'>Volver al inicio</a>"
-
 
 # ---------------- LISTAR SOLICITUDES ----------------
 @app.route("/solicitudes")
 def listar_solicitudes():
     lista = Solicitud.query.all()
     return render_template("solicitudes.html", solicitudes=lista)
-
 
 # ---------------- BUSCAR POR CÉDULA ----------------
 @app.route("/buscar", methods=["GET", "POST"])
@@ -115,7 +109,6 @@ def buscar():
 
     return render_template("buscar.html", resultados=resultados)
 
-
 # ---------------- CAMBIAR ESTADO ----------------
 @app.route("/estado/<int:id>/<nuevo_estado>")
 def cambiar_estado(id, nuevo_estado):
@@ -127,12 +120,10 @@ def cambiar_estado(id, nuevo_estado):
 
     return redirect(url_for("listar_solicitudes"))
 
-
 # ---------------- PÁGINA ABOUT ----------------
 @app.route("/about")
 def about():
     return render_template("about.html")
-
 
 # ---------------- EJECUCIÓN LOCAL ----------------
 if __name__ == "__main__":
