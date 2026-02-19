@@ -1,25 +1,68 @@
-<table class="table table-bordered table-striped">
-    <thead class="table-success">
-        <tr>
-            <th>ID</th>
-            <th>Cédula</th>
-            <th>Subvención</th>
-            <th>Estado</th>
-            <th>Acciones</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for s in solicitudes %}
-        <tr>
-            <td>{{ s.id }}</td>
-            <td>{{ s.cedula }}</td>
-            <td>{{ s.subvencion }}</td>
-            <td>{{ s.estado }}</td>
-            <td>
-                <a href="/estado/{{ s.id }}/Aprobado" class="btn btn-success btn-sm">Aprobar</a>
-                <a href="/estado/{{ s.id }}/Rechazado" class="btn btn-danger btn-sm">Rechazar</a>
-            </td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+
+    <h2 class="fw-bold text-success mb-3">Panel Administrador de Solicitudes</h2>
+
+    <table class="table table-bordered table-striped align-middle">
+        <thead class="table-success text-center">
+            <tr>
+                <th>ID</th>
+                <th>Cédula</th>
+                <th>Subvención</th>
+                <th>Tipo de bono</th>
+                <th>Estado</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+
+        <tbody>
+            {% for s in solicitudes %}
+            <tr>
+                <td>{{ s.id }}</td>
+                <td>{{ s.cedula }}</td>
+                <td>{{ s.subvencion }}</td>
+                <td>{{ s.tipo_bono }}</td>
+
+                <!-- ESTADO CON COLOR -->
+                <td class="text-center">
+                    <span class="
+                        {% if s.estado == 'Aprobado' %}text-success fw-bold
+                        {% elif s.estado == 'Rechazado' %}text-danger fw-bold
+                        {% else %}text-warning fw-bold
+                        {% endif %}
+                    ">
+                        {{ s.estado }}
+                    </span>
+                </td>
+
+                <!-- BOTONES CON ICONOS Y CONFIRMACIÓN -->
+                <td class="d-flex gap-2 justify-content-center">
+
+                    <a href="{{ url_for('cambiar_estado', id=s.id, nuevo_estado='Aprobado') }}"
+                       class="btn btn-success btn-sm">
+                       ✔️ Aprobar
+                    </a>
+
+                    <a href="{{ url_for('cambiar_estado', id=s.id, nuevo_estado='Rechazado') }}"
+                       class="btn btn-danger btn-sm"
+                       onclick="return confirmarRechazo();">
+                       ❌ Rechazar
+                    </a>
+
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+</div>
+
+<!-- SCRIPT DE CONFIRMACIÓN -->
+<script>
+function confirmarRechazo() {
+    return confirm("¿Seguro que deseas RECHAZAR esta solicitud?");
+}
+</script>
+{% endblock %}
