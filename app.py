@@ -9,13 +9,11 @@ app = Flask(__name__)
 database_url = os.getenv("DATABASE_URL")
 
 if database_url:
-    # Render a veces usa postgres:// y SQLAlchemy necesita postgresql://
     if database_url.startswith("postgres://"):
         database_url = database_url.replace("postgres://", "postgresql://", 1)
 
     app.config["SQLALCHEMY_DATABASE_URI"] = database_url
 else:
-    # Base de datos local SQLite
     app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///subvenciones.db"
 
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
@@ -33,10 +31,11 @@ class Solicitud(db.Model):
     tipo_bono = db.Column(db.String(20), nullable=False)
     estado = db.Column(db.String(20), default="En revisión")
 
-# ---------------- CREAR TABLAS AUTOMÁTICAMENTE ----------------
-@app.before_request
-def crear_tablas():
+
+# ✅ CREAR TABLAS SOLO UNA VEZ AL INICIAR
+with app.app_context():
     db.create_all()
+
 
 # ---------------- RUTA PRINCIPAL ----------------
 @app.route("/")
@@ -66,48 +65,60 @@ def index():
         estadisticas=estadisticas,
     )
 
-# ---------------- SOLICITAR SUBVENCIÓN ----------------
+
+# ---------------- SOLICITAR ----------------
 @app.route("/solicitar", methods=["GET", "POST"])
 def solicitar():
     if request.method == "POST":
-        cedula = request.form["cedula"]
-        tipo = request.form["subvencion"]
-        tipo_bono = request.form["tipo_bono"]
+        try:
+            nueva = Solicitud(
+                cedula=request.form["cedula"],
+                subvencion=request.form["subvencion"],
+                tipo_bono=request.form["tipo_bono"],
+            )
 
-        nueva = Solicitud(
-            cedula=cedula,
-            subvencion=tipo,
-            tipo_bono=tipo_bono,
-        )
+            db.session.add(nueva)
+            db.session.commit()
 
-        db.session.add(nueva)
-        db.session.commit()
+            return redirect(url_for("exito"))
 
-        return redirect(url_for("exito"))
+        except Exception as e:
+            db.session.rollback()
+            return f"Error al guardar: {e}"
 
     return render_template("solicitar.html")
 
-# ---------------- MENSAJE DE ÉXITO ----------------
+
+# ---------------- ÉXITO ----------------
 @app.route("/exito")
 def exito():
-    return "<h2>✅ Solicitud guardada correctamente</h2><a href='/'>Volver al inicio</a>"
+    return "<h2>✅ Solicitud guardada correctamente</h2><a href='/'>Volver</a>"
 
-# ---------------- LISTAR SOLICITUDES ----------------
+
+# ---------------- LISTAR ----------------
 @app.route("/solicitudes")
 def listar_solicitudes():
-    lista = Solicitud.query.all()
-    return render_template("solicitudes.html", solicitudes=lista)
+    try:
+        lista = Solicitud.query.all()
+        return render_template("solicitudes.html", solicitudes=lista)
+    except Exception as e:
+        return f"Error al consultar: {e}"
 
-# ---------------- BUSCAR POR CÉDULA ----------------
+
+# ---------------- BUSCAR ----------------
 @app.route("/buscar", methods=["GET", "POST"])
 def buscar():
     resultados = []
 
     if request.method == "POST":
-        cedula = request.form["cedula"]
-        resultados = Solicitud.query.filter_by(cedula=cedula).all()
+        try:
+            cedula = request.form["cedula"]
+            resultados = Solicitud.query.filter_by(cedula=cedula).all()
+        except Exception as e:
+            return f"Error en búsqueda: {e}"
 
     return render_template("buscar.html", resultados=resultados)
+
 
 # ---------------- CAMBIAR ESTADO ----------------
 @app.route("/estado/<int:id>/<nuevo_estado>")
@@ -120,10 +131,12 @@ def cambiar_estado(id, nuevo_estado):
 
     return redirect(url_for("listar_solicitudes"))
 
-# ---------------- PÁGINA ABOUT ----------------
+
+# ---------------- ABOUT ----------------
 @app.route("/about")
 def about():
     return render_template("about.html")
+
 
 # ---------------- EJECUCIÓN LOCAL ----------------
 if __name__ == "__main__":
