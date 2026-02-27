@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h2>Inventario de Paquetes Tecnológicos</h2>
+
+<form method="POST" action="{{ url_for('agregar_producto') }}">
+    <input type="text" name="nombre" placeholder="Nombre" required>
+    <input type="number" name="precio" placeholder="Precio" required>
+    <input type="number" name="subsidio" placeholder="Subsidio %" required>
+    <input type="number" name="cantidad" placeholder="Stock" required>
+    <button type="submit">Agregar</button>
+</form>
+
+<br>
+
+<table border="1">
+<tr>
+<th>ID</th>
+<th>Nombre</th>
+<th>Precio</th>
+<th>Subsidio</th>
+<th>Stock</th>
+<th>Acciones</th>
+</tr>
+
+{% for p in productos %}
+<tr>
+<td>{{ p.id }}</td>
+<td>{{ p.nombre }}</td>
+<td>{{ p.precio }}</td>
+<td>{{ p.subsidio }}%</td>
+<td>{{ p.cantidad }}</td>
+<td>
+<a href="{{ url_for('eliminar_producto', id=p.id) }}">Eliminar</a>
+</td>
+</tr>
+{% endfor %}
+</table>
+
+{% endblock %}

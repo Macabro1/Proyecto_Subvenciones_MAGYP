@@ -1,61 +1,31 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <title>Sistema de Subvenciones MAGP</title>
-
-    <!-- Bootstrap -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-
-    <!-- CSS propio -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+<meta charset="UTF-8">
+<title>{% block title %}Sistema MAGP{% endblock %}</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
 
-<!-- 🔥 FLEX VERTICAL PARA PEGAR FOOTER ABAJO -->
 <body class="bg-light d-flex flex-column min-vh-100">
 
-<!-- 🔵 NAVBAR -->
 <nav class="navbar navbar-expand-lg navbar-dark bg-success">
-    <div class="container">
-
-        <a class="navbar-brand fw-bold" href="/">Subvenciones MAGP</a>
-
-        <div class="collapse navbar-collapse show">
-            <ul class="navbar-nav ms-auto">
-
-                <li class="nav-item">
-                    <a class="btn btn-outline-light me-2" href="/">Inicio</a>
-                </li>
-
-                <li class="nav-item">
-                    <a class="btn btn-light text-success me-2" href="/solicitar">Solicitar</a>
-                </li>
-
-                <li class="nav-item">
-                    <a class="btn btn-warning text-dark me-2" href="/solicitudes">Solicitudes</a>
-                </li>
-
-                <li class="nav-item">
-                    <a class="btn btn-info text-white me-2" href="/buscar">Buscar</a>
-                </li>
-
-                <li class="nav-item">
-                    <a class="btn btn-secondary" href="/about">Acerca de</a>
-                </li>
-
-            </ul>
-        </div>
-    </div>
+<div class="container">
+<a class="navbar-brand fw-bold" href="/">MAGP Inventario</a>
+<ul class="navbar-nav ms-auto">
+<li class="nav-item"><a class="btn btn-light me-2" href="/">Inicio</a></li>
+<li class="nav-item"><a class="btn btn-info me-2" href="/solicitudes">Solicitudes</a></li>
+<li class="nav-item"><a class="btn btn-primary me-2" href="/inventario">Inventario</a></li>
+<li class="nav-item"><a class="btn btn-secondary" href="/buscar">Buscar</a></li>
+</ul>
+</div>
 </nav>
 
-<!-- 🔵 CONTENIDO QUE EMPUJA EL FOOTER -->
 <main class="container mt-4 flex-grow-1">
-    {% block content %}{% endblock %}
+{% block content %}{% endblock %}
 </main>
 
-<!-- 🔵 FOOTER SIEMPRE ABAJO -->
-<footer class="bg-dark text-white text-center py-3">
-    © 2026 Ministerio de Agricultura, Ganadería y Pesca - Ecuador
+<footer class="bg-dark text-white text-center py-3 mt-auto">
+© 2026 Ministerio de Agricultura, Ganadería y Pesca - Ecuador
 </footer>
 
 </body>

@@ -1,57 +1,29 @@
 {% extends "base.html" %}
-
 {% block content %}
 
-<div class="card shadow">
-    <div class="card-header bg-success text-white">
-        <h3 class="mb-0">Formulario de Solicitud</h3>
-    </div>
+<h2>Formulario de Solicitud</h2>
 
-    <div class="card-body">
+<form method="POST">
 
-        <form method="POST">
-
-            <!-- CÉDULA -->
-            <div class="mb-3">
-                <label class="form-label">Cédula</label>
-                <input
-                    type="text"
-                    name="cedula"
-                    class="form-control"
-                    placeholder="Ej: 1723456789"
-                    required
-                    pattern="\d{10}"
-                >
-            </div>
-
-            <!-- SUBVENCIÓN -->
-            <div class="mb-3">
-                <label class="form-label">Tipo de subvención</label>
-                <select name="subvencion" class="form-select" required>
-                    <option value="">Seleccione...</option>
-                    <option value="bono">Bono</option>
-                    <option value="credito">Crédito</option>
-                </select>
-            </div>
-
-            <!-- TIPO DE BONO -->
-            <div class="mb-3">
-                <label class="form-label">Tipo de bono</label>
-                <select name="tipo_bono" class="form-select">
-                    <option value="">Seleccione...</option>
-                    <option value="Agrícola">Agrícola</option>
-                    <option value="Ganadero">Ganadero</option>
-                    <option value="Pesquero">Pesquero</option>
-                </select>
-            </div>
-
-            <button type="submit" class="btn btn-success w-100">
-                Guardar solicitud
-            </button>
-
-        </form>
-
-    </div>
+<div class="mb-3">
+<label>Cédula</label>
+<input type="text" name="cedula" class="form-control" required pattern="\d{10}">
 </div>
+
+<div class="mb-3">
+<label>Rubro</label>
+<select name="subvencion" class="form-select" required>
+<option value="">Seleccione...</option>
+{% for p in productos %}
+<option value="{{ p.nombre }}">
+{{ p.nombre }} - ${{ p.precio }} - {{ p.subsidio }}%
+</option>
+{% endfor %}
+</select>
+</div>
+
+<button class="btn btn-success w-100">Guardar solicitud</button>
+
+</form>
 
 {% endblock %}

@@ -1,143 +1,182 @@
-import os
 from flask import Flask, render_template, request, redirect, url_for
-from flask_sqlalchemy import SQLAlchemy
+from config import Config
+from models import db, ProductoDB, Solicitud
+from inventario_poo import Inventario
 
-# ---------------- CREAR APP ----------------
 app = Flask(__name__)
+app.config.from_object(Config)
 
-# ---------------- CONFIGURACIÓN BD ----------------
-database_url = os.getenv("DATABASE_URL")
+db.init_app(app)
 
-if database_url:
-    if database_url.startswith("postgres://"):
-        database_url = database_url.replace("postgres://", "postgresql://", 1)
+# ===============================
+# INICIALIZAR INVENTARIO POO
+# ===============================
+inventario = Inventario()
 
-    app.config["SQLALCHEMY_DATABASE_URI"] = database_url
-else:
-    app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///subvenciones.db"
+# ===============================
+# CREAR TABLAS Y CARGAR PRODUCTOS INICIALES
+# ===============================
+def cargar_productos_iniciales():
+    if ProductoDB.query.count() == 0:
+        productos_iniciales = [
+            ("Arroz", 180, 70, 20),
+            ("Papa", 200, 75, 15),
+            ("Cacao", 250, 80, 10),
+            ("Maíz duro", 150, 70, 25),
+            ("Maíz suave", 160, 70, 25),
+            ("Aguacate", 300, 60, 12),
+            ("Banano", 220, 65, 18),
+            ("Tomate", 140, 70, 30),
+            ("Café", 280, 75, 14),
+            ("Pitahaya", 320, 60, 8),
+            ("Maracuyá", 210, 65, 20),
+            ("Palma aceitera", 350, 70, 10),
+            ("Caña de azúcar", 190, 70, 22),
+            ("Cebolla colorada", 130, 75, 28),
+            ("Chocho", 170, 70, 16),
+            ("Mora", 240, 65, 14),
+            ("Guanábana", 260, 60, 9),
+        ]
 
-app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+        for nombre, precio, subsidio, cantidad in productos_iniciales:
+            nuevo = ProductoDB(
+                nombre=nombre,
+                precio=precio,
+                subsidio=subsidio,
+                cantidad=cantidad
+            )
+            db.session.add(nuevo)
 
-# ---------------- INICIALIZAR BD ----------------
-db = SQLAlchemy(app)
-
-# ---------------- MODELO ----------------
-class Solicitud(db.Model):
-    __tablename__ = "solicitud"
-
-    id = db.Column(db.Integer, primary_key=True)
-    cedula = db.Column(db.String(10), nullable=False)
-    subvencion = db.Column(db.String(50), nullable=False)
-    tipo_bono = db.Column(db.String(20), nullable=False)
-    estado = db.Column(db.String(20), default="En revisión")
+        db.session.commit()
+        print("✔ Inventario inicial cargado correctamente")
 
 
-# ✅ CREAR TABLAS SOLO UNA VEZ AL INICIAR
 with app.app_context():
     db.create_all()
+    cargar_productos_iniciales()
 
+# ===============================
+# CARGAR INVENTARIO POO ANTES DE CADA REQUEST
+# ===============================
+@app.before_request
+def cargar_inventario():
+    productos = ProductoDB.query.all()
+    inventario.cargar_desde_db(productos)
 
-# ---------------- RUTA PRINCIPAL ----------------
+# ===============================
+# HOME
+# ===============================
 @app.route("/")
 def index():
-    sistema = "Sistema de Subvenciones"
-    descripcion = "Registro y consulta de subvenciones agrícolas en Ecuador"
 
-    subvenciones = [
-        {"nombre": "Bono Agrícola", "tipo": "bono"},
-        {"nombre": "Crédito Productivo", "tipo": "credito"},
-    ]
+    total_solicitudes = Solicitud.query.count()
+    aprobadas = Solicitud.query.filter_by(estado="Aprobado").count()
+    rechazadas = Solicitud.query.filter_by(estado="Rechazado").count()
 
-    try:
-        total = Solicitud.query.count()
-    except Exception:
-        total = 0
-
-    estadisticas = {
-        "solicitantes_registrados": total,
-    }
+    productos = ProductoDB.query.all()
 
     return render_template(
         "index.html",
-        sistema=sistema,
-        descripcion=descripcion,
-        subvenciones=subvenciones,
-        estadisticas=estadisticas,
+        productos=productos,
+        total_solicitudes=total_solicitudes,
+        aprobadas=aprobadas,
+        rechazadas=rechazadas
     )
 
-
-# ---------------- SOLICITAR ----------------
-@app.route("/solicitar", methods=["GET", "POST"])
+# ===============================
+# CREAR SOLICITUD
+# ===============================
+@app.route("/solicitar", methods=["POST"])
 def solicitar():
-    if request.method == "POST":
-        try:
-            nueva = Solicitud(
-                cedula=request.form["cedula"],
-                subvencion=request.form["subvencion"],
-                tipo_bono=request.form["tipo_bono"],
-            )
 
-            db.session.add(nueva)
-            db.session.commit()
+    cedula = request.form["cedula"]
+    producto_id = request.form["producto_id"]
 
-            return redirect(url_for("exito"))
+    nueva = Solicitud(
+        cedula=cedula,
+        producto_id=producto_id,
+        estado="En revisión"
+    )
 
-        except Exception as e:
-            db.session.rollback()
-            return f"Error al guardar: {e}"
+    db.session.add(nueva)
+    db.session.commit()
 
-    return render_template("solicitar.html")
+    return redirect(url_for("index"))
 
-
-# ---------------- ÉXITO ----------------
-@app.route("/exito")
-def exito():
-    return "<h2>✅ Solicitud guardada correctamente</h2><a href='/'>Volver</a>"
-
-
-# ---------------- LISTAR ----------------
+# ===============================
+# LISTAR SOLICITUDES
+# ===============================
 @app.route("/solicitudes")
 def listar_solicitudes():
-    try:
-        lista = Solicitud.query.all()
-        return render_template("solicitudes.html", solicitudes=lista)
-    except Exception as e:
-        return f"Error al consultar: {e}"
 
+    solicitudes = Solicitud.query.all()
+    return render_template("solicitudes.html", solicitudes=solicitudes)
 
-# ---------------- BUSCAR ----------------
-@app.route("/buscar", methods=["GET", "POST"])
-def buscar():
-    resultados = []
-
-    if request.method == "POST":
-        try:
-            cedula = request.form["cedula"]
-            resultados = Solicitud.query.filter_by(cedula=cedula).all()
-        except Exception as e:
-            return f"Error en búsqueda: {e}"
-
-    return render_template("buscar.html", resultados=resultados)
-
-
-# ---------------- CAMBIAR ESTADO ----------------
+# ===============================
+# APROBAR / RECHAZAR
+# ===============================
 @app.route("/estado/<int:id>/<nuevo_estado>")
 def cambiar_estado(id, nuevo_estado):
+
     solicitud = Solicitud.query.get_or_404(id)
 
-    if nuevo_estado in ["Aprobado", "Rechazado"]:
-        solicitud.estado = nuevo_estado
+    # Si ya fue aprobada no volver a descontar
+    if solicitud.estado == "Aprobado":
+        return redirect(url_for("listar_solicitudes"))
+
+    if nuevo_estado == "Aprobado":
+
+        producto = solicitud.producto
+
+        if producto.cantidad <= 0:
+            return "No hay stock disponible"
+
+        producto.cantidad -= 1
+        solicitud.estado = "Aprobado"
+
+        db.session.commit()
+
+    elif nuevo_estado == "Rechazado":
+        solicitud.estado = "Rechazado"
         db.session.commit()
 
     return redirect(url_for("listar_solicitudes"))
 
+# ===============================
+# INVENTARIO CRUD
+# ===============================
+@app.route("/inventario")
+def ver_inventario():
 
-# ---------------- ABOUT ----------------
-@app.route("/about")
-def about():
-    return render_template("about.html")
+    productos = ProductoDB.query.all()
+    return render_template("inventario.html", productos=productos)
 
+@app.route("/agregar_producto", methods=["POST"])
+def agregar_producto():
 
-# ---------------- EJECUCIÓN LOCAL ----------------
+    nuevo = ProductoDB(
+        nombre=request.form["nombre"],
+        precio=float(request.form["precio"]),
+        subsidio=float(request.form["subsidio"]),
+        cantidad=int(request.form["cantidad"])
+    )
+
+    db.session.add(nuevo)
+    db.session.commit()
+
+    return redirect(url_for("ver_inventario"))
+
+@app.route("/eliminar_producto/<int:id>")
+def eliminar_producto(id):
+
+    producto = ProductoDB.query.get_or_404(id)
+    db.session.delete(producto)
+    db.session.commit()
+
+    return redirect(url_for("ver_inventario"))
+
+# ===============================
+# EJECUTAR APP
+# ===============================
 if __name__ == "__main__":
     app.run(debug=True)

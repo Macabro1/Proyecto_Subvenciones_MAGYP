@@ -1,5 +1,70 @@
-{% extends 'base.html' %}
+{% extends "base.html" %}
 
 {% block content %}
-<h1>Panel de administración</h1>
+
+<div class="container mt-4">
+
+    <h2 class="mb-4 text-center">Panel Administrador</h2>
+
+    <!-- 🔎 BUSCADOR -->
+    <form method="POST" action="{{ url_for('buscar') }}" class="row mb-4">
+        <div class="col-md-8">
+            <input type="text" name="cedula" class="form-control"
+                   placeholder="Buscar por número de cédula" required>
+        </div>
+        <div class="col-md-4">
+            <button type="submit" class="btn btn-primary w-100">
+                Buscar
+            </button>
+        </div>
+    </form>
+
+    <!-- TABLA -->
+    <table class="table table-bordered table-striped text-center">
+        <thead class="table-dark">
+            <tr>
+                <th>ID</th>
+                <th>Nombre</th>
+                <th>Cédula</th>
+                <th>Tipo</th>
+                <th>Estado</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for s in solicitudes %}
+            <tr>
+                <td>{{ s.id }}</td>
+                <td>{{ s.nombre }}</td>
+                <td>{{ s.cedula }}</td>
+                <td>{{ s.tipo }}</td>
+                <td>
+                    {% if s.estado == "Aprobado" %}
+                        <span class="badge bg-success">{{ s.estado }}</span>
+                    {% elif s.estado == "Rechazado" %}
+                        <span class="badge bg-danger">{{ s.estado }}</span>
+                    {% else %}
+                        <span class="badge bg-warning text-dark">{{ s.estado }}</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <a href="{{ url_for('cambiar_estado', id=s.id, estado='Aprobado') }}"
+                       class="btn btn-success btn-sm">Aprobar</a>
+
+                    <a href="{{ url_for('cambiar_estado', id=s.id, estado='Rechazado') }}"
+                       class="btn btn-danger btn-sm">Rechazar</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="text-center mt-3">
+        <a href="{{ url_for('index') }}" class="btn btn-secondary">
+            Volver al inicio
+        </a>
+    </div>
+
+</div>
+
 {% endblock %}

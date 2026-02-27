@@ -1,6 +1,6 @@
-from app import app, db, inicializar_datos_ecuador
+from app import app
+from models import db
 
 with app.app_context():
     db.create_all()
-    inicializar_datos_ecuador()
-    print("Base de datos inicializada correctamente")
+    print("Base de datos creada correctamente")
