@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="container mt-4">
+
+<h2 class="mb-4">Guardar Datos en Archivos</h2>
+
+<form method="POST" action="{{ url_for('guardar_archivos') }}" class="row g-2 mb-4">
+    <div class="col-md-4">
+        <input type="text" name="nombre" class="form-control" placeholder="Nombre" required>
+    </div>
+    <div class="col-md-4">
+        <input type="text" name="cedula" class="form-control" placeholder="Cédula" required>
+    </div>
+    <div class="col-md-2">
+        <button type="submit" class="btn btn-success w-100">Guardar</button>
+    </div>
+</form>
+
+<a href="{{ url_for('limpiar_datos') }}" class="btn btn-danger mb-4">
+    Limpiar Archivos
+</a>
+
+<hr>
+
+<h3>Datos TXT</h3>
+<table class="table table-bordered table-striped">
+    <thead class="table-dark">
+        <tr>
+            <th>Nombre</th>
+            <th>Cédula</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for d in datos_txt %}
+        <tr>
+            <td>{{ d.nombre }}</td>
+            <td>{{ d.cedula }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<h3>Datos JSON</h3>
+<table class="table table-bordered table-striped">
+    <thead class="table-dark">
+        <tr>
+            <th>Nombre</th>
+            <th>Cédula</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for d in datos_json %}
+        <tr>
+            <td>{{ d.nombre }}</td>
+            <td>{{ d.cedula }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<h3>Datos CSV</h3>
+<table class="table table-bordered table-striped">
+    <thead class="table-dark">
+        <tr>
+            <th>Nombre</th>
+            <th>Cédula</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for d in datos_csv %}
+        <tr>
+            <td>{{ d.nombre }}</td>
+            <td>{{ d.cedula }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+</div>
+
+{% endblock %}
