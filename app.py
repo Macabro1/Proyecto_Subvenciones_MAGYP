@@ -89,6 +89,25 @@ with app.app_context():
 
 
 # ===============================
+# PRUEBA DE CONEXIÓN MYSQL
+# ===============================
+@app.route("/test_insert")
+def test_insert():
+
+    producto_prueba = ProductoDB(
+        nombre="Producto Prueba Flask",
+        precio=99.9,
+        subsidio=50,
+        cantidad=3
+    )
+
+    db.session.add(producto_prueba)
+    db.session.commit()
+
+    return "Inserción exitosa en MySQL desde Flask"
+
+
+# ===============================
 # CARGAR INVENTARIO POO
 # ===============================
 @app.before_request
