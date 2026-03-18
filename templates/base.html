@@ -10,32 +10,66 @@
 
 <nav class="navbar navbar-expand-lg navbar-dark bg-success">
 <div class="container">
+
 <a class="navbar-brand fw-bold" href="/">MAGP Inventario</a>
 
-<ul class="navbar-nav ms-auto">
+<ul class="navbar-nav ms-auto align-items-center">
 
-<li class="nav-item">
-<a class="btn btn-light me-2" href="/">Inicio</a>
-</li>
+    {% if current_user.is_authenticated %}
 
-<li class="nav-item">
-<a class="btn btn-info me-2" href="/solicitudes">Solicitudes</a>
-</li>
+        <!-- USUARIO LOGUEADO -->
+        <li class="nav-item me-3">
+            <span class="text-white fw-bold">
+                👤 {{ current_user.nombre }}
+            </span>
+        </li>
 
-<li class="nav-item">
-<a class="btn btn-primary me-2" href="/inventario">Inventario</a>
-</li>
+        <li class="nav-item">
+            <a class="btn btn-light me-2" href="/">Inicio</a>
+        </li>
 
-<!-- ✅ NUEVO BOTÓN DATOS -->
-<li class="nav-item">
-<a class="btn btn-warning me-2" href="/datos">Datos</a>
-</li>
+        <li class="nav-item">
+            <a class="btn btn-info me-2" href="/solicitudes">Solicitudes</a>
+        </li>
 
-<li class="nav-item">
-<a class="btn btn-secondary" href="/buscar">Buscar</a>
-</li>
+        <li class="nav-item">
+            <a class="btn btn-primary me-2" href="/inventario">Inventario</a>
+        </li>
+
+        <li class="nav-item">
+            <a class="btn btn-warning me-2" href="/datos">Datos</a>
+        </li>
+
+        <li class="nav-item">
+            <a class="btn btn-secondary me-2" href="/buscar">Buscar</a>
+        </li>
+
+        <!-- LOGOUT -->
+        <li class="nav-item">
+            <a class="btn btn-danger" href="{{ url_for('logout') }}">
+                Cerrar sesión
+            </a>
+        </li>
+
+    {% else %}
+
+        <!-- USUARIO NO LOGUEADO -->
+        <li class="nav-item">
+            <a class="btn btn-light me-2" href="{{ url_for('login') }}">
+                Iniciar sesión
+            </a>
+        </li>
+
+        <li class="nav-item">
+            <a class="btn btn-warning" href="{{ url_for('registro') }}">
+                Registrarse
+            </a>
+        </li>
+
+    {% endif %}
 
 </ul>
+
 </div>
 </nav>
 

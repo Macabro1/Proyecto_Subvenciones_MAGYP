@@ -19,6 +19,6 @@ class Config:
 
     else:
         # Base de datos local MySQL
-        SQLALCHEMY_DATABASE_URI = "mysql+pymysql://root:Miguel2018@localhost/sistema_magp"
+        SQLALCHEMY_DATABASE_URI = "mysql+pymysql://root:Miguel2018@localhost/subvenciones_magp"
 
     SQLALCHEMY_TRACK_MODIFICATIONS = False

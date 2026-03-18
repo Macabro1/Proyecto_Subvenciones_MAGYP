@@ -1,14 +1,27 @@
-from flask import Flask, render_template, request, redirect, url_for
+import pymysql
+pymysql.install_as_MySQLdb()
+
+from flask import Flask, render_template, request, redirect, url_for, flash
 from config import Config
-from models import db, ProductoDB, Solicitud
+from models import db, ProductoDB, Solicitud, Usuario
 from inventario_poo import Inventario
 
+from flask_login import LoginManager, login_user, login_required, logout_user, current_user
+from werkzeug.security import generate_password_hash, check_password_hash
+
+# ===============================
 # IMPORT PERSISTENCIA
+# ===============================
+
 from inventario.persistencia import (
     guardar_txt, guardar_json, guardar_csv,
     leer_txt, leer_json, leer_csv,
     limpiar_archivos
 )
+
+# ===============================
+# CONFIGURACIÓN APP
+# ===============================
 
 app = Flask(__name__)
 app.config.from_object(Config)
@@ -17,8 +30,26 @@ db.init_app(app)
 inventario = Inventario()
 
 # ===============================
-# VALIDACIÓN CÉDULA ECUATORIANA
+# FLASK LOGIN
 # ===============================
+
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = "login"
+
+@login_manager.user_loader
+def load_user(user_id):
+    return Usuario.query.get(int(user_id))
+
+# Permite usar current_user en HTML
+@app.context_processor
+def inject_user():
+    return dict(current_user=current_user)
+
+# ===============================
+# VALIDACIÓN CÉDULA
+# ===============================
+
 def validar_cedula_ecuatoriana(cedula):
 
     if len(cedula) != 10 or not cedula.isdigit():
@@ -45,30 +76,32 @@ def validar_cedula_ecuatoriana(cedula):
 
     return digito_verificador == int(cedula[9])
 
+# ===============================
+# CARGAR PRODUCTOS INICIALES
+# ===============================
 
-# ===============================
-# CREAR TABLAS Y CARGAR PRODUCTOS
-# ===============================
 def cargar_productos_iniciales():
+
     if ProductoDB.query.count() == 0:
+
         productos_iniciales = [
-            ("Arroz", 180, 70, 20),
-            ("Papa", 200, 75, 15),
-            ("Cacao", 250, 80, 10),
-            ("Maíz duro", 150, 70, 25),
-            ("Maíz suave", 160, 70, 25),
-            ("Aguacate", 300, 60, 12),
-            ("Banano", 220, 65, 18),
-            ("Tomate", 140, 70, 30),
-            ("Café", 280, 75, 14),
-            ("Pitahaya", 320, 60, 8),
-            ("Maracuyá", 210, 65, 20),
-            ("Palma aceitera", 350, 70, 10),
-            ("Caña de azúcar", 190, 70, 22),
-            ("Cebolla colorada", 130, 75, 28),
-            ("Chocho", 170, 70, 16),
-            ("Mora", 240, 65, 14),
-            ("Guanábana", 260, 60, 9),
+            ("Arroz",180,70,20),
+            ("Papa",200,75,15),
+            ("Cacao",250,80,10),
+            ("Maíz duro",150,70,25),
+            ("Maíz suave",160,70,25),
+            ("Aguacate",300,60,12),
+            ("Banano",220,65,18),
+            ("Tomate",140,70,30),
+            ("Café",280,75,14),
+            ("Pitahaya",320,60,8),
+            ("Maracuyá",210,65,20),
+            ("Palma aceitera",350,70,10),
+            ("Caña de azúcar",190,70,22),
+            ("Cebolla colorada",130,75,28),
+            ("Chocho",170,70,16),
+            ("Mora",240,65,14),
+            ("Guanábana",260,60,9)
         ]
 
         for nombre, precio, subsidio, cantidad in productos_iniciales:
@@ -82,44 +115,99 @@ def cargar_productos_iniciales():
 
         db.session.commit()
 
-
+# Crear tablas
 with app.app_context():
     db.create_all()
     cargar_productos_iniciales()
 
+# ===============================
+# REGISTRO
+# ===============================
+
+@app.route("/registro", methods=["GET","POST"])
+def registro():
+
+    if current_user.is_authenticated:
+        return redirect(url_for("index"))
+
+    if request.method == "POST":
+
+        nombre = request.form["nombre"]
+        email = request.form["email"]
+        password = generate_password_hash(request.form["password"])
+
+        existe = Usuario.query.filter_by(email=email).first()
+
+        if existe:
+            flash("El correo ya está registrado", "danger")
+            return redirect(url_for("registro"))
+
+        nuevo_usuario = Usuario(
+            nombre=nombre,
+            email=email,
+            password=password
+        )
+
+        db.session.add(nuevo_usuario)
+        db.session.commit()
+
+        flash("Registro exitoso. Ahora puedes iniciar sesión", "success")
+        return redirect(url_for("login"))
+
+    return render_template("registro.html")
 
 # ===============================
-# PRUEBA DE CONEXIÓN MYSQL
+# LOGIN
 # ===============================
-@app.route("/test_insert")
-def test_insert():
 
-    producto_prueba = ProductoDB(
-        nombre="Producto Prueba Flask",
-        precio=99.9,
-        subsidio=50,
-        cantidad=3
-    )
+@app.route("/login", methods=["GET","POST"])
+def login():
 
-    db.session.add(producto_prueba)
-    db.session.commit()
+    if current_user.is_authenticated:
+        return redirect(url_for("index"))
 
-    return "Inserción exitosa en MySQL desde Flask"
+    if request.method == "POST":
 
+        email = request.form["email"]
+        password = request.form["password"]
+
+        usuario = Usuario.query.filter_by(email=email).first()
+
+        if usuario and check_password_hash(usuario.password, password):
+            login_user(usuario)
+            flash("Bienvenido al sistema", "success")
+            return redirect(url_for("index"))
+
+        flash("Credenciales incorrectas", "danger")
+
+    return render_template("login.html")
 
 # ===============================
-# CARGAR INVENTARIO POO
+# LOGOUT
 # ===============================
+
+@app.route("/logout")
+@login_required
+def logout():
+    logout_user()
+    flash("Sesión cerrada correctamente", "info")
+    return redirect(url_for("login"))
+
+# ===============================
+# CARGAR INVENTARIO
+# ===============================
+
 @app.before_request
 def cargar_inventario():
     productos = ProductoDB.query.all()
     inventario.cargar_desde_db(productos)
 
-
 # ===============================
 # HOME
 # ===============================
+
 @app.route("/")
+@login_required
 def index():
 
     total_solicitudes = Solicitud.query.count()
@@ -136,15 +224,20 @@ def index():
         rechazadas=rechazadas
     )
 
+# ===============================
+# SOLICITUDES
+# ===============================
 
-# ===============================
-# CREAR SOLICITUD
-# ===============================
 @app.route("/solicitar", methods=["POST"])
+@login_required
 def solicitar():
 
     cedula = request.form["cedula"]
     producto_id = request.form["producto_id"]
+
+    if not validar_cedula_ecuatoriana(cedula):
+        flash("Cédula ecuatoriana inválida", "danger")
+        return redirect(url_for("index"))
 
     nueva = Solicitud(
         cedula=cedula,
@@ -155,23 +248,21 @@ def solicitar():
     db.session.add(nueva)
     db.session.commit()
 
+    flash("Solicitud enviada correctamente", "success")
     return redirect(url_for("index"))
 
-
-# ===============================
-# LISTAR SOLICITUDES
-# ===============================
 @app.route("/solicitudes")
+@login_required
 def listar_solicitudes():
-
     solicitudes = Solicitud.query.all()
     return render_template("solicitudes.html", solicitudes=solicitudes)
-
 
 # ===============================
 # APROBAR / RECHAZAR
 # ===============================
+
 @app.route("/estado/<int:id>/<nuevo_estado>")
+@login_required
 def cambiar_estado(id, nuevo_estado):
 
     solicitud = Solicitud.query.get_or_404(id)
@@ -184,29 +275,32 @@ def cambiar_estado(id, nuevo_estado):
         producto = solicitud.producto
 
         if producto.cantidad <= 0:
-            return "No hay stock disponible"
+            flash("No hay stock disponible", "danger")
+            return redirect(url_for("listar_solicitudes"))
 
         producto.cantidad -= 1
         solicitud.estado = "Aprobado"
-        db.session.commit()
+        flash("Solicitud aprobada", "success")
 
     elif nuevo_estado == "Rechazado":
         solicitud.estado = "Rechazado"
-        db.session.commit()
+        flash("Solicitud rechazada", "warning")
 
+    db.session.commit()
     return redirect(url_for("listar_solicitudes"))
-
 
 # ===============================
 # INVENTARIO
 # ===============================
+
 @app.route("/inventario")
+@login_required
 def ver_inventario():
     productos = ProductoDB.query.all()
     return render_template("inventario.html", productos=productos)
 
-
 @app.route("/agregar_producto", methods=["POST"])
+@login_required
 def agregar_producto():
 
     nuevo = ProductoDB(
@@ -219,39 +313,45 @@ def agregar_producto():
     db.session.add(nuevo)
     db.session.commit()
 
+    flash("Producto agregado correctamente", "success")
     return redirect(url_for("ver_inventario"))
 
-
 @app.route("/eliminar_producto/<int:id>")
+@login_required
 def eliminar_producto(id):
 
     producto = ProductoDB.query.get_or_404(id)
+
     db.session.delete(producto)
     db.session.commit()
 
+    flash("Producto eliminado", "warning")
     return redirect(url_for("ver_inventario"))
 
+# ===============================
+# PERSISTENCIA
+# ===============================
 
-# ===============================
-# PERSISTENCIA ARCHIVOS
-# ===============================
 @app.route("/guardar_archivos", methods=["POST"])
+@login_required
 def guardar_archivos():
 
     nombre = request.form["nombre"]
     cedula = request.form["cedula"]
 
     if not validar_cedula_ecuatoriana(cedula):
-        return "Cédula inválida"
+        flash("Cédula inválida", "danger")
+        return redirect(url_for("ver_datos"))
 
     guardar_txt(nombre, cedula)
     guardar_json(nombre, cedula)
     guardar_csv(nombre, cedula)
 
+    flash("Datos guardados en archivos", "success")
     return redirect(url_for("ver_datos"))
 
-
 @app.route("/datos")
+@login_required
 def ver_datos():
 
     datos_txt = leer_txt()
@@ -265,16 +365,16 @@ def ver_datos():
         datos_csv=datos_csv
     )
 
-
 @app.route("/limpiar_datos")
+@login_required
 def limpiar_datos():
-
     limpiar_archivos()
+    flash("Datos eliminados", "info")
     return redirect(url_for("ver_datos"))
 
+# ===============================
+# RUN
+# ===============================
 
-# ===============================
-# EJECUTAR APP
-# ===============================
 if __name__ == "__main__":
     app.run(debug=True)
