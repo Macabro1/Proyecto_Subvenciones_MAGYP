@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<title>{% block title %}Sistema MAGP{% endblock %}</title>
+<title>{% block title %}Sistema de Subvenciones MAGP{% endblock %}</title>
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
 
@@ -11,23 +11,28 @@
 <nav class="navbar navbar-expand-lg navbar-dark bg-success">
 <div class="container">
 
-<a class="navbar-brand fw-bold" href="/">MAGP Inventario</a>
+<a class="navbar-brand fw-bold" href="/">Subvenciones MAGP Inventario</a>
 
 <ul class="navbar-nav ms-auto align-items-center">
 
-    {% if current_user.is_authenticated %}
+{% if current_user.is_authenticated %}
 
-        <!-- USUARIO LOGUEADO -->
-        <li class="nav-item me-3">
-            <span class="text-white fw-bold">
-                👤 {{ current_user.nombre }}
-            </span>
-        </li>
+    <!-- USUARIO LOGUEADO -->
+    <li class="nav-item me-3">
+        <span class="text-white fw-bold">
+            👤 {{ current_user.nombre }}
+            <span class="badge bg-dark">{{ current_user.rol|upper }}</span>
+        </span>
+    </li>
 
-        <li class="nav-item">
-            <a class="btn btn-light me-2" href="/">Inicio</a>
-        </li>
+    <!-- INICIO -->
+    <li class="nav-item">
+        <a class="btn btn-light me-2" href="/">Inicio</a>
+    </li>
 
+    {% if current_user.rol == "admin" %}
+
+        <!-- 👑 ADMIN -->
         <li class="nav-item">
             <a class="btn btn-info me-2" href="/solicitudes">Solicitudes</a>
         </li>
@@ -44,34 +49,57 @@
             <a class="btn btn-secondary me-2" href="/buscar">Buscar</a>
         </li>
 
-        <!-- LOGOUT -->
-        <li class="nav-item">
-            <a class="btn btn-danger" href="{{ url_for('logout') }}">
-                Cerrar sesión
-            </a>
-        </li>
-
     {% else %}
 
-        <!-- USUARIO NO LOGUEADO -->
+        <!-- 👤 USUARIO -->
         <li class="nav-item">
-            <a class="btn btn-light me-2" href="{{ url_for('login') }}">
-                Iniciar sesión
-            </a>
-        </li>
-
-        <li class="nav-item">
-            <a class="btn btn-warning" href="{{ url_for('registro') }}">
-                Registrarse
-            </a>
+            <a class="btn btn-info me-2" href="/mis_solicitudes">Mis Solicitudes</a>
         </li>
 
     {% endif %}
+
+    <!-- LOGOUT -->
+    <li class="nav-item">
+        <a class="btn btn-danger" href="{{ url_for('logout') }}">
+            Cerrar sesión
+        </a>
+    </li>
+
+{% else %}
+
+    <!-- NO LOGUEADO -->
+    <li class="nav-item">
+        <a class="btn btn-light me-2" href="{{ url_for('login') }}">
+            Iniciar sesión
+        </a>
+    </li>
+
+    <li class="nav-item">
+        <a class="btn btn-warning" href="{{ url_for('registro') }}">
+            Registrarse
+        </a>
+    </li>
+
+{% endif %}
 
 </ul>
 
 </div>
 </nav>
+
+<!-- 🔥 MENSAJES FLASH (AQUÍ ESTÁ LA SOLUCIÓN) -->
+<div class="container mt-3">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+</div>
 
 <main class="container mt-4 flex-grow-1">
 {% block content %}{% endblock %}
@@ -80,6 +108,9 @@
 <footer class="bg-dark text-white text-center py-3 mt-auto">
 © 2026 Ministerio de Agricultura, Ganadería y Pesca - Ecuador
 </footer>
+
+<!-- 🔥 NECESARIO PARA ALERTAS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
 </body>
 </html>

@@ -6,110 +6,203 @@
 
 <div class="container mt-4">
 
-    <!-- ========================= -->
-    <!-- ESTADÍSTICAS REALES -->
-    <!-- ========================= -->
+```
+<!-- 👋 USUARIO -->
+<div class="mb-3 text-end">
+    <strong>Usuario:</strong> {{ current_user.nombre }} |
+    <span class="badge bg-dark">{{ current_user.rol|upper }}</span>
+</div>
 
-    <div class="row text-center mb-4">
+<!-- 🚫 ALERTA SI YA TIENE SOLICITUD -->
+{% if solicitud_activa %}
+<div class="alert alert-warning shadow-sm">
+    ⚠️ Ya tienes una solicitud en proceso. No puedes enviar otra hasta que sea revisada.
+</div>
+{% endif %}
 
-        <div class="col-md-4">
-            <div class="card bg-primary text-white shadow">
-                <div class="card-body">
-                    <h5>Total Solicitudes</h5>
-                    <h3>{{ total_solicitudes }}</h3>
-                </div>
-            </div>
-        </div>
+<!-- 📝 FORMULARIO -->
+<div class="card shadow border-0">
 
-        <div class="col-md-4">
-            <div class="card bg-success text-white shadow">
-                <div class="card-body">
-                    <h5>Aprobadas</h5>
-                    <h3>{{ aprobadas }}</h3>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-md-4">
-            <div class="card bg-danger text-white shadow">
-                <div class="card-body">
-                    <h5>Rechazadas</h5>
-                    <h3>{{ rechazadas }}</h3>
-                </div>
-            </div>
-        </div>
-
+    <div class="card-header bg-success text-white">
+        <h4 class="mb-0">Formulario de Solicitud de Paquete Tecnológico</h4>
     </div>
 
+    <div class="card-body">
 
-    <!-- ========================= -->
-    <!-- FORMULARIO CONECTADO A INVENTARIO -->
-    <!-- ========================= -->
+        <form method="POST" action="{{ url_for('solicitar') }}">
 
-    <div class="card shadow">
-        <div class="card-header bg-dark text-white">
-            <h4>Formulario de Solicitud de Paquete Tecnológico</h4>
-        </div>
+            <div class="row">
 
-        <div class="card-body">
+                <!-- CÉDULA -->
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Cédula</label>
 
-            <form method="POST" action="{{ url_for('solicitar') }}">
+                    <input list="cedulas"
+                           id="cedula"
+                           name="cedula"
+                           class="form-control"
+                           required
+                           pattern="\d{10}"
+                           {% if solicitud_activa %}disabled{% endif %}>
 
-                <div class="row">
-
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label">Cédula</label>
-                        <input type="text" name="cedula" class="form-control" required pattern="\d{10}">
-                    </div>
-
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label">Rubro</label>
-                        <select name="producto_id" class="form-select" required>
-                            <option value="">Seleccione...</option>
-                            {% for p in productos %}
-                                <option value="{{ p.id }}">
-                                    {{ p.nombre }} 
-                                    - Precio: ${{ p.precio }} 
-                                    - Subsidio: {{ p.subsidio }}%
-                                    - Stock: {{ p.cantidad }}
-                                </option>
-                            {% endfor %}
-                        </select>
-                    </div>
-
+                    <datalist id="cedulas">
+                        {% for p in productores %}
+                            <option value="{{ p.cedula }}">
+                        {% endfor %}
+                    </datalist>
                 </div>
 
-                <div class="text-center">
-                    <button type="submit" class="btn btn-success btn-lg">
-                        Enviar Solicitud
-                    </button>
+                <!-- PRODUCTO -->
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Rubro</label>
+
+                    <select name="producto_id"
+                            class="form-select"
+                            required
+                            {% if solicitud_activa %}disabled{% endif %}>
+
+                        <option value="">Seleccione...</option>
+
+                        {% for p in productos %}
+                        <option value="{{ p.id }}">
+                            {{ p.nombre }} - ${{ p.precio }} - Subsidio {{ p.subsidio }}% - Stock {{ p.cantidad }}
+                        </option>
+                        {% endfor %}
+
+                    </select>
                 </div>
 
-            </form>
+            </div>
 
-        </div>
+            <!-- DATOS AUTOCOMPLETADOS -->
+            <div class="row">
+
+                <div class="col-md-6">
+                    <input type="text" id="nombres" class="form-control mt-2 bg-light" placeholder="Nombres" readonly>
+                </div>
+
+                <div class="col-md-6">
+                    <input type="text" id="apellidos" class="form-control mt-2 bg-light" placeholder="Apellidos" readonly>
+                </div>
+
+                <div class="col-md-6">
+                    <input type="text" id="correo" class="form-control mt-2 bg-light" placeholder="Correo" readonly>
+                </div>
+
+                <div class="col-md-6">
+                    <input type="text" id="telefono" class="form-control mt-2 bg-light" placeholder="Teléfono" readonly>
+                </div>
+
+                <div class="col-md-6">
+                    <input type="text" id="provincia" class="form-control mt-2 bg-light" placeholder="Provincia" readonly>
+                </div>
+
+                <div class="col-md-6">
+                    <input type="text" id="canton" class="form-control mt-2 bg-light" placeholder="Cantón" readonly>
+                </div>
+
+                <div class="col-md-6">
+                    <input type="text" id="parroquia" class="form-control mt-2 bg-light" placeholder="Parroquia" readonly>
+                </div>
+
+                <div class="col-md-6">
+                    <input type="text" id="sexo" class="form-control mt-2 bg-light" placeholder="Sexo" readonly>
+                </div>
+
+            </div>
+
+            <!-- BOTÓN -->
+            <div class="text-center mt-4">
+                <button type="submit"
+                        class="btn btn-success btn-lg"
+                        {% if solicitud_activa %}disabled{% endif %}>
+                    Enviar Solicitud
+                </button>
+            </div>
+
+        </form>
+
     </div>
+</div>
 
+<!-- BOTONES -->
+<div class="text-center mt-4">
 
-    <!-- ========================= -->
-    <!-- BOTONES DE NAVEGACIÓN -->
-    <!-- ========================= -->
+    {% if current_user.rol == "admin" %}
 
-    <div class="text-center mt-4">
-        <a href="{{ url_for('listar_solicitudes') }}" class="btn btn-outline-secondary me-2">
+        <a href="{{ url_for('listar_solicitudes') }}" class="btn btn-outline-dark">
             Ver Solicitudes
         </a>
 
-        <!-- ✅ CORREGIDO AQUÍ -->
-        <a href="{{ url_for('ver_inventario') }}" class="btn btn-outline-primary me-2">
-            Ver Inventario
+    {% else %}
+
+        <a href="{{ url_for('mis_solicitudes') }}" class="btn btn-outline-primary">
+            Mis Solicitudes
         </a>
 
-        <a href="#" class="btn btn-outline-dark">
-            Reportes
-        </a>
-    </div>
+    {% endif %}
 
 </div>
+
+<!-- 🔥 REPORTES SOLO ADMIN -->
+{% if current_user.rol == "admin" %}
+<div class="text-center mt-4">
+
+    <h5 class="mb-3">📊 Reportes PDF</h5>
+
+    <a href="{{ url_for('reporte_provincia_pdf') }}" class="btn btn-outline-primary m-1">
+        Provincias
+    </a>
+
+    <a href="{{ url_for('reporte_sexo_pdf') }}" class="btn btn-outline-success m-1">
+        Sexo
+    </a>
+
+    <a href="{{ url_for('reporte_producto_pdf') }}" class="btn btn-outline-dark m-1">
+        Productos
+    </a>
+
+</div>
+{% endif %}
+```
+
+</div>
+
+<!-- 🔥 AUTOCOMPLETADO CORREGIDO -->
+
+<script>
+document.getElementById("cedula").addEventListener("blur", function() {
+
+    const cedula = this.value.trim();
+
+    if (cedula.length !== 10) return;
+
+    fetch(`/buscar_productor?cedula=${cedula}`)
+    .then(res => res.json())
+    .then(data => {
+
+        if (Object.keys(data).length === 0) {
+            throw new Error();
+        }
+
+        document.getElementById("nombres").value = data.nombres || "";
+        document.getElementById("apellidos").value = data.apellidos || "";
+        document.getElementById("correo").value = data.correo || "";
+        document.getElementById("telefono").value = data.telefono || "";
+        document.getElementById("provincia").value = data.provincia || "";
+        document.getElementById("canton").value = data.canton || "";
+        document.getElementById("parroquia").value = data.parroquia || "";
+        document.getElementById("sexo").value = data.sexo || "";
+
+    })
+    .catch(() => {
+
+        alert("⚠️ Productor no encontrado");
+
+        ["nombres","apellidos","correo","telefono","provincia","canton","parroquia","sexo"]
+        .forEach(id => document.getElementById(id).value = "");
+    });
+});
+</script>
 
 {% endblock %}

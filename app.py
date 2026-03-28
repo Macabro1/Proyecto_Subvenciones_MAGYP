@@ -1,90 +1,56 @@
 import pymysql
 pymysql.install_as_MySQLdb()
 
-from flask import Flask, render_template, request, redirect, url_for, flash
+from flask import Flask, render_template, request, redirect, url_for, flash, send_file, abort, jsonify
 from config import Config
 from models import db, ProductoDB, Solicitud, Usuario
-from inventario_poo import Inventario
-
+from services.producto_service import obtener_productos
 from flask_login import LoginManager, login_user, login_required, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
+from functools import wraps
+from reportlab.platypus import SimpleDocTemplate, Table
+from datetime import datetime
+from io import BytesIO
 
-# ===============================
-# IMPORT PERSISTENCIA
-# ===============================
-
+# 🔥 PERSISTENCIA
 from inventario.persistencia import (
     guardar_txt, guardar_json, guardar_csv,
     leer_txt, leer_json, leer_csv,
     limpiar_archivos
 )
 
-# ===============================
-# CONFIGURACIÓN APP
-# ===============================
-
 app = Flask(__name__)
 app.config.from_object(Config)
+app.secret_key = "clave_secreta"
 
 db.init_app(app)
-inventario = Inventario()
 
-# ===============================
-# FLASK LOGIN
-# ===============================
-
+# ================= LOGIN =================
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = "login"
 
 @login_manager.user_loader
 def load_user(user_id):
-    return Usuario.query.get(int(user_id))
+    return db.session.get(Usuario, int(user_id))
 
-# Permite usar current_user en HTML
 @app.context_processor
 def inject_user():
     return dict(current_user=current_user)
 
-# ===============================
-# VALIDACIÓN CÉDULA
-# ===============================
+# ================= ADMIN =================
+def admin_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not current_user.is_authenticated or current_user.rol != "admin":
+            abort(403)
+        return f(*args, **kwargs)
+    return decorated_function
 
-def validar_cedula_ecuatoriana(cedula):
-
-    if len(cedula) != 10 or not cedula.isdigit():
-        return False
-
-    provincia = int(cedula[:2])
-    if provincia < 1 or provincia > 24:
-        return False
-
-    tercer_digito = int(cedula[2])
-    if tercer_digito >= 6:
-        return False
-
-    coeficientes = [2,1,2,1,2,1,2,1,2]
-    suma = 0
-
-    for i in range(9):
-        valor = int(cedula[i]) * coeficientes[i]
-        if valor >= 10:
-            valor -= 9
-        suma += valor
-
-    digito_verificador = (10 - (suma % 10)) % 10
-
-    return digito_verificador == int(cedula[9])
-
-# ===============================
-# CARGAR PRODUCTOS INICIALES
-# ===============================
-
-def cargar_productos_iniciales():
-
+# ================= INIT =================
+def cargar_productos():
     if ProductoDB.query.count() == 0:
-
-        productos_iniciales = [
+        productos = [
             ("Arroz",180,70,20),
             ("Papa",200,75,15),
             ("Cacao",250,80,10),
@@ -93,288 +59,368 @@ def cargar_productos_iniciales():
             ("Aguacate",300,60,12),
             ("Banano",220,65,18),
             ("Tomate",140,70,30),
-            ("Café",280,75,14),
-            ("Pitahaya",320,60,8),
-            ("Maracuyá",210,65,20),
-            ("Palma aceitera",350,70,10),
-            ("Caña de azúcar",190,70,22),
-            ("Cebolla colorada",130,75,28),
-            ("Chocho",170,70,16),
-            ("Mora",240,65,14),
-            ("Guanábana",260,60,9)
+            ("Café",280,75,14)
         ]
-
-        for nombre, precio, subsidio, cantidad in productos_iniciales:
-            nuevo = ProductoDB(
-                nombre=nombre,
-                precio=precio,
-                subsidio=subsidio,
-                cantidad=cantidad
-            )
-            db.session.add(nuevo)
-
+        for n, p, s, c in productos:
+            db.session.add(ProductoDB(nombre=n, precio=p, subsidio=s, cantidad=c))
         db.session.commit()
 
-# Crear tablas
+def crear_admin():
+    if not Usuario.query.filter_by(email="admin@admin.com").first():
+        admin = Usuario(
+            nombre="Admin",
+            email="admin@admin.com",
+            password=generate_password_hash("admin123"),
+            rol="admin"
+        )
+        db.session.add(admin)
+        db.session.commit()
+
 with app.app_context():
     db.create_all()
-    cargar_productos_iniciales()
+    cargar_productos()
+    crear_admin()
 
-# ===============================
-# REGISTRO
-# ===============================
-
-@app.route("/registro", methods=["GET","POST"])
+# ================= AUTH =================
+@app.route("/registro", methods=["GET", "POST"])
 def registro():
-
-    if current_user.is_authenticated:
-        return redirect(url_for("index"))
-
     if request.method == "POST":
-
-        nombre = request.form["nombre"]
-        email = request.form["email"]
-        password = generate_password_hash(request.form["password"])
-
-        existe = Usuario.query.filter_by(email=email).first()
-
-        if existe:
-            flash("El correo ya está registrado", "danger")
+        if Usuario.query.filter_by(email=request.form["email"]).first():
+            flash("Correo ya existe", "danger")
             return redirect(url_for("registro"))
 
-        nuevo_usuario = Usuario(
-            nombre=nombre,
-            email=email,
-            password=password
+        nuevo = Usuario(
+            nombre=request.form["nombre"],
+            email=request.form["email"],
+            password=generate_password_hash(request.form["password"]),
+            rol="usuario"
         )
-
-        db.session.add(nuevo_usuario)
+        db.session.add(nuevo)
         db.session.commit()
-
-        flash("Registro exitoso. Ahora puedes iniciar sesión", "success")
+        flash("Usuario registrado", "success")
         return redirect(url_for("login"))
 
     return render_template("registro.html")
 
-# ===============================
-# LOGIN
-# ===============================
-
-@app.route("/login", methods=["GET","POST"])
+@app.route("/login", methods=["GET", "POST"])
 def login():
-
-    if current_user.is_authenticated:
-        return redirect(url_for("index"))
-
     if request.method == "POST":
-
-        email = request.form["email"]
-        password = request.form["password"]
-
-        usuario = Usuario.query.filter_by(email=email).first()
-
-        if usuario and check_password_hash(usuario.password, password):
-            login_user(usuario)
-            flash("Bienvenido al sistema", "success")
+        user = Usuario.query.filter_by(email=request.form["email"]).first()
+        if user and check_password_hash(user.password, request.form["password"]):
+            login_user(user)
+            if user.rol == "admin":
+                return redirect(url_for("listar_solicitudes"))
             return redirect(url_for("index"))
 
         flash("Credenciales incorrectas", "danger")
 
     return render_template("login.html")
 
-# ===============================
-# LOGOUT
-# ===============================
-
 @app.route("/logout")
 @login_required
 def logout():
     logout_user()
-    flash("Sesión cerrada correctamente", "info")
     return redirect(url_for("login"))
 
-# ===============================
-# CARGAR INVENTARIO
-# ===============================
-
-@app.before_request
-def cargar_inventario():
-    productos = ProductoDB.query.all()
-    inventario.cargar_desde_db(productos)
-
-# ===============================
-# HOME
-# ===============================
-
+# ================= HOME =================
 @app.route("/")
 @login_required
 def index():
-
-    total_solicitudes = Solicitud.query.count()
-    aprobadas = Solicitud.query.filter_by(estado="Aprobado").count()
-    rechazadas = Solicitud.query.filter_by(estado="Rechazado").count()
-
-    productos = ProductoDB.query.all()
+    solicitud_activa = Solicitud.query.filter_by(
+        usuario_id=current_user.id_usuario,
+        estado="En revisión"
+    ).first()
 
     return render_template(
         "index.html",
-        productos=productos,
-        total_solicitudes=total_solicitudes,
-        aprobadas=aprobadas,
-        rechazadas=rechazadas
+        productos=obtener_productos(),
+        solicitud_activa=solicitud_activa
     )
 
-# ===============================
-# SOLICITUDES
-# ===============================
-
+# ================= SOLICITAR =================
 @app.route("/solicitar", methods=["POST"])
 @login_required
 def solicitar():
+    existente = Solicitud.query.filter_by(
+        usuario_id=current_user.id_usuario,
+        estado="En revisión"
+    ).first()
 
-    cedula = request.form["cedula"]
-    producto_id = request.form["producto_id"]
-
-    if not validar_cedula_ecuatoriana(cedula):
-        flash("Cédula ecuatoriana inválida", "danger")
+    if existente:
+        flash("Ya tienes una solicitud activa", "warning")
         return redirect(url_for("index"))
 
-    nueva = Solicitud(
-        cedula=cedula,
-        producto_id=producto_id,
+    producto_id = request.form.get("producto_id")
+    cedula_productor = request.form.get("cedula")
+
+    if not cedula_productor:
+        flash("Debes seleccionar un productor", "danger")
+        return redirect(url_for("index"))
+
+    if not producto_id:
+        flash("Debes seleccionar un producto", "danger")
+        return redirect(url_for("index"))
+
+    nueva_solicitud = Solicitud(
+        usuario_id=current_user.id_usuario,
+        cedula=cedula_productor,
+        producto_id=int(producto_id),
+        fecha=datetime.now(),
         estado="En revisión"
     )
 
-    db.session.add(nueva)
+    db.session.add(nueva_solicitud)
     db.session.commit()
 
     flash("Solicitud enviada correctamente", "success")
     return redirect(url_for("index"))
 
+# ================= LISTAR SOLICITUDES =================
 @app.route("/solicitudes")
 @login_required
+@admin_required
 def listar_solicitudes():
     solicitudes = Solicitud.query.all()
     return render_template("solicitudes.html", solicitudes=solicitudes)
 
-# ===============================
-# APROBAR / RECHAZAR
-# ===============================
-
-@app.route("/estado/<int:id>/<nuevo_estado>")
+# ================= MIS SOLICITUDES =================
+@app.route("/mis_solicitudes")
 @login_required
-def cambiar_estado(id, nuevo_estado):
+def mis_solicitudes():
+    solicitudes = Solicitud.query.filter_by(usuario_id=current_user.id_usuario).all()
+    return render_template("mis_solicitudes.html", solicitudes=solicitudes)
 
-    solicitud = Solicitud.query.get_or_404(id)
+# ================= CANCELAR =================
+@app.route("/cancelar_solicitud/<int:id>")
+@login_required
+def cancelar_solicitud(id):
+    solicitud = db.session.get(Solicitud, id)
 
-    if solicitud.estado == "Aprobado":
-        return redirect(url_for("listar_solicitudes"))
+    if not solicitud:
+        flash("Solicitud no encontrada", "danger")
+        return redirect(url_for("mis_solicitudes"))
 
-    if nuevo_estado == "Aprobado":
+    if solicitud.usuario_id != current_user.id_usuario:
+        flash("No tienes permiso", "danger")
+        return redirect(url_for("mis_solicitudes"))
 
-        producto = solicitud.producto
-
-        if producto.cantidad <= 0:
-            flash("No hay stock disponible", "danger")
-            return redirect(url_for("listar_solicitudes"))
-
-        producto.cantidad -= 1
-        solicitud.estado = "Aprobado"
-        flash("Solicitud aprobada", "success")
-
-    elif nuevo_estado == "Rechazado":
-        solicitud.estado = "Rechazado"
-        flash("Solicitud rechazada", "warning")
-
+    db.session.delete(solicitud)
     db.session.commit()
+    flash("Solicitud cancelada", "success")
+    return redirect(url_for("mis_solicitudes"))
+
+# ================= CAMBIAR ESTADO =================
+@app.route("/cambiar_estado/<int:id>/<nuevo_estado>")
+@login_required
+@admin_required
+def cambiar_estado(id, nuevo_estado):
+    solicitud = db.session.get(Solicitud, id)
+
+    if solicitud:
+        solicitud.estado = nuevo_estado
+        db.session.commit()
+        flash(f"Estado cambiado a {nuevo_estado}", "success")
+    else:
+        flash("Solicitud no encontrada", "danger")
+
     return redirect(url_for("listar_solicitudes"))
 
-# ===============================
-# INVENTARIO
-# ===============================
+# ================= AUTOCOMPLETE =================
+@app.route("/buscar_productor")
+@login_required
+def buscar_productor():
+    cedula = request.args.get("cedula", "").strip().replace(" ", "")
 
+    if not cedula:
+        return jsonify({})
+
+    productor = db.session.execute(
+        db.text("""
+            SELECT nombres, apellidos, correo, telefono, provincia, canton, parroquia, sexo
+            FROM productores
+            WHERE REPLACE(cedula, ' ', '') = :cedula
+        """),
+        {"cedula": cedula}
+    ).fetchone()
+
+    if not productor:
+        return jsonify({})
+
+    return jsonify({
+        "nombres": productor[0],
+        "apellidos": productor[1],
+        "correo": productor[2],
+        "telefono": productor[3],
+        "provincia": productor[4],
+        "canton": productor[5],
+        "parroquia": productor[6],
+        "sexo": productor[7]
+    })
+
+# ================= INVENTARIO =================
 @app.route("/inventario")
 @login_required
-def ver_inventario():
-    productos = ProductoDB.query.all()
-    return render_template("inventario.html", productos=productos)
+def mostrar_inventario():
+    return render_template("inventario.html", productos=obtener_productos())
 
 @app.route("/agregar_producto", methods=["POST"])
 @login_required
+@admin_required
 def agregar_producto():
+    nombre = request.form.get("nombre")
+    precio = request.form.get("precio", type=float)
+    subsidio = request.form.get("subsidio", type=int)
+    cantidad = request.form.get("cantidad", type=int)
 
-    nuevo = ProductoDB(
-        nombre=request.form["nombre"],
-        precio=float(request.form["precio"]),
-        subsidio=float(request.form["subsidio"]),
-        cantidad=int(request.form["cantidad"])
-    )
+    if nombre and precio is not None:
+        producto = ProductoDB(nombre=nombre, precio=precio, subsidio=subsidio, cantidad=cantidad)
+        db.session.add(producto)
+        db.session.commit()
+        flash("Producto agregado correctamente", "success")
+    else:
+        flash("Datos incompletos", "danger")
 
-    db.session.add(nuevo)
-    db.session.commit()
-
-    flash("Producto agregado correctamente", "success")
-    return redirect(url_for("ver_inventario"))
+    return redirect(url_for("mostrar_inventario"))
 
 @app.route("/eliminar_producto/<int:id>")
 @login_required
-def eliminar_producto(id):
+@admin_required
+def eliminar_producto_route(id):
+    producto = db.session.get(ProductoDB, id)
 
-    producto = ProductoDB.query.get_or_404(id)
+    if producto:
+        db.session.delete(producto)
+        db.session.commit()
+        flash("Producto eliminado correctamente", "success")
+    else:
+        flash("Producto no encontrado", "danger")
 
-    db.session.delete(producto)
-    db.session.commit()
+    return redirect(url_for("mostrar_inventario"))
 
-    flash("Producto eliminado", "warning")
-    return redirect(url_for("ver_inventario"))
+# ================= PDF =================
+@app.route("/reporte_pdf")
+@login_required
+def reporte_pdf():
+    productos = obtener_productos()
 
-# ===============================
-# PERSISTENCIA
-# ===============================
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(buffer)
+
+    data = [["Producto", "Precio", "Subsidio", "Cantidad"]]
+    for p in productos:
+        data.append([p.nombre, p.precio, p.subsidio, p.cantidad])
+
+    doc.build([Table(data)])
+    buffer.seek(0)
+
+    return send_file(buffer, as_attachment=True, download_name="inventario.pdf", mimetype="application/pdf")
+
+# 🔥 FIX ERROR
+@app.route("/reporte_producto_pdf")
+@login_required
+def reporte_producto_pdf():
+    return reporte_pdf()
+
+# ================= REPORTE SEXO =================
+@app.route("/reporte_sexo_pdf")
+@login_required
+def reporte_sexo_pdf():
+    solicitudes = Solicitud.query.all()
+
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(buffer)
+
+    data = [["Producto", "Cédula", "Sexo", "Fecha", "Estado"]]
+    for s in solicitudes:
+        data.append([
+            s.producto.nombre if s.producto else "",
+            s.cedula,
+            getattr(s, "sexo", ""),
+            s.fecha.strftime("%Y-%m-%d"),
+            s.estado
+        ])
+
+    doc.build([Table(data)])
+    buffer.seek(0)
+
+    return send_file(buffer, as_attachment=True, download_name="solicitudes_sexo.pdf", mimetype="application/pdf")
+
+# ================= REPORTE PROVINCIA =================
+@app.route("/reporte_provincia_pdf")
+@login_required
+def reporte_provincia_pdf():
+    solicitudes = Solicitud.query.all()
+
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(buffer)
+
+    data = [["Producto", "Cédula", "Provincia", "Fecha", "Estado"]]
+    for s in solicitudes:
+        data.append([
+            s.producto.nombre if s.producto else "",
+            s.cedula,
+            getattr(s, "provincia", ""),
+            s.fecha.strftime("%Y-%m-%d"),
+            s.estado
+        ])
+
+    doc.build([Table(data)])
+    buffer.seek(0)
+
+    return send_file(buffer, as_attachment=True, download_name="solicitudes_provincia.pdf", mimetype="application/pdf")
+
+# ================= DATOS =================
+@app.route("/datos")
+@login_required
+def mostrar_datos():
+    return render_template(
+        "datos.html",
+        datos_txt=leer_txt() or [],
+        datos_json=leer_json() or [],
+        datos_csv=leer_csv() or []
+    )
 
 @app.route("/guardar_archivos", methods=["POST"])
 @login_required
 def guardar_archivos():
+    datos = request.form.to_dict()
+    cedula = datos.get("cedula")
 
-    nombre = request.form["nombre"]
-    cedula = request.form["cedula"]
+    if not cedula:
+        flash("Debe ingresar la cédula", "danger")
+        return redirect(url_for("mostrar_datos"))
 
-    if not validar_cedula_ecuatoriana(cedula):
-        flash("Cédula inválida", "danger")
-        return redirect(url_for("ver_datos"))
+    guardar_txt(datos, cedula)
+    guardar_json(datos, cedula)
+    guardar_csv(datos, cedula)
 
-    guardar_txt(nombre, cedula)
-    guardar_json(nombre, cedula)
-    guardar_csv(nombre, cedula)
+    flash("Datos guardados", "success")
+    return redirect(url_for("mostrar_datos"))
 
-    flash("Datos guardados en archivos", "success")
-    return redirect(url_for("ver_datos"))
-
-@app.route("/datos")
-@login_required
-def ver_datos():
-
-    datos_txt = leer_txt()
-    datos_json = leer_json()
-    datos_csv = leer_csv()
-
-    return render_template(
-        "datos.html",
-        datos_txt=datos_txt,
-        datos_json=datos_json,
-        datos_csv=datos_csv
-    )
-
+# ================= LIMPIAR =================
 @app.route("/limpiar_datos")
 @login_required
 def limpiar_datos():
     limpiar_archivos()
-    flash("Datos eliminados", "info")
-    return redirect(url_for("ver_datos"))
+    flash("Datos eliminados", "success")
+    return redirect(url_for("mostrar_datos"))
 
-# ===============================
-# RUN
-# ===============================
+# ================= BUSCAR  =================
+@app.route("/buscar", methods=["GET", "POST"])
+@login_required
+def buscar():
+    resultados = []
 
+    if request.method == "POST":
+        cedula = request.form.get("cedula", "").strip()
+
+        if cedula:
+            resultados = Solicitud.query.filter(
+                Solicitud.cedula.like(f"%{cedula}%")
+            ).all()
+
+    return render_template("buscar.html", resultados=resultados)
+
+# ================= RUN =================
 if __name__ == "__main__":
     app.run(debug=True)

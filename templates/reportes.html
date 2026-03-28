@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+{% block title %}Reportes{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+
+    <h2 class="mb-4">📊 Reportes del Sistema</h2>
+
+    <!-- 🔥 BOTONES PDF -->
+    <div class="mb-4 text-center">
+        <a href="{{ url_for('reporte_provincia_pdf') }}" class="btn btn-outline-primary m-1">
+            📄 Descargar Provincias
+        </a>
+        <a href="{{ url_for('reporte_sexo_pdf') }}" class="btn btn-outline-success m-1">
+            📄 Descargar Sexo
+        </a>
+        <a href="{{ url_for('reporte_producto_pdf') }}" class="btn btn-outline-dark m-1">
+            📄 Descargar Productos
+        </a>
+    </div>
+
+    <!-- 🔘 SELECTOR DE REPORTES -->
+    <ul class="nav nav-tabs mb-3" id="reporteTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="provincia-tab" data-bs-toggle="tab" data-bs-target="#provincia" type="button" role="tab" aria-controls="provincia" aria-selected="true">
+                Por Provincia
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="sexo-tab" data-bs-toggle="tab" data-bs-target="#sexo" type="button" role="tab" aria-controls="sexo" aria-selected="false">
+                Por Sexo
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="producto-tab" data-bs-toggle="tab" data-bs-target="#producto" type="button" role="tab" aria-controls="producto" aria-selected="false">
+                Por Producto
+            </button>
+        </li>
+    </ul>
+
+    <div class="tab-content" id="reporteTabsContent">
+        <!-- PROVINCIA -->
+        <div class="tab-pane fade show active" id="provincia" role="tabpanel" aria-labelledby="provincia-tab">
+            <div class="card mb-4 shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    Solicitudes por Provincia
+                </div>
+                <div class="card-body">
+                    <table class="table table-bordered table-striped text-center">
+                        <tr>
+                            <th>Provincia</th>
+                            <th>Total</th>
+                        </tr>
+                        {% for p in por_provincia %}
+                        <tr>
+                            <td>{{ p[0] }}</td>
+                            <td>{{ p[1] }}</td>
+                        </tr>
+                        {% endfor %}
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- SEXO -->
+        <div class="tab-pane fade" id="sexo" role="tabpanel" aria-labelledby="sexo-tab">
+            <div class="card mb-4 shadow-sm">
+                <div class="card-header bg-success text-white">
+                    Solicitudes por Sexo
+                </div>
+                <div class="card-body">
+                    <table class="table table-bordered table-striped text-center">
+                        <tr>
+                            <th>Sexo</th>
+                            <th>Total</th>
+                        </tr>
+                        {% for s in por_sexo %}
+                        <tr>
+                            <td>{{ s[0] }}</td>
+                            <td>{{ s[1] }}</td>
+                        </tr>
+                        {% endfor %}
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- PRODUCTO -->
+        <div class="tab-pane fade" id="producto" role="tabpanel" aria-labelledby="producto-tab">
+            <div class="card mb-4 shadow-sm">
+                <div class="card-header bg-dark text-white">
+                    Solicitudes por Producto
+                </div>
+                <div class="card-body">
+                    <table class="table table-bordered table-striped text-center">
+                        <tr>
+                            <th>Producto</th>
+                            <th>Total</th>
+                        </tr>
+                        {% for pr in por_producto %}
+                        <tr>
+                            <td>{{ pr[0] }}</td>
+                            <td>{{ pr[1] }}</td>
+                        </tr>
+                        {% endfor %}
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 🔙 BOTÓN VOLVER -->
+    <div class="text-center mt-4">
+        <a href="{{ url_for('index') }}" class="btn btn-secondary">
+            ⬅ Volver al Inicio
+        </a>
+    </div>
+
+</div>
+
+<!-- Bootstrap 5 JS (asegúrate de tenerlo en tu base.html) -->
+<script>
+    var triggerTabList = [].slice.call(document.querySelectorAll('#reporteTabs button'))
+    triggerTabList.forEach(function (triggerEl) {
+      var tabTrigger = new bootstrap.Tab(triggerEl)
+      triggerEl.addEventListener('click', function (event) {
+        event.preventDefault()
+        tabTrigger.show()
+      })
+    })
+</script>
+{% endblock %}

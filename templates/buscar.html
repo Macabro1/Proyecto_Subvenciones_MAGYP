@@ -1,20 +1,60 @@
 {% extends "base.html" %}
+
+{% block title %}Buscar{% endblock %}
+
 {% block content %}
 
-<h2>Buscar por Cédula</h2>
+<div class="container mt-4">
 
-<form method="POST">
-<input type="text" name="cedula" class="form-control" required>
-<button class="btn btn-success mt-2">Buscar</button>
-</form>
+    <h2>Buscar Solicitudes por Cédula</h2>
 
-{% if resultados %}
-<hr>
-{% for s in resultados %}
-<p>
-Solicitud #{{ s.id }} - {{ s.producto.nombre }} - {{ s.estado }}
-</p>
-{% endfor %}
-{% endif %}
+    <form method="POST">
+        <input 
+            type="text" 
+            name="cedula" 
+            class="form-control" 
+            placeholder="Ingrese cédula" 
+            required
+        >
+        <button class="btn btn-success mt-2">Buscar</button>
+    </form>
+
+    {% if resultados %}
+        <hr>
+        <h4>Resultados:</h4>
+
+        <table class="table table-bordered table-striped mt-3">
+            <thead class="table-dark">
+                <tr>
+                    <th>ID</th>
+                    <th>Cédula</th>
+                    <th>Producto</th>
+                    <th>Estado</th>
+                    <th>Fecha</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for s in resultados %}
+                <tr>
+                    <td>{{ s.id }}</td>
+                    <td>{{ s.cedula }}</td>
+                    <td>{{ s.producto.nombre if s.producto else 'Sin producto' }}</td>
+                    <td>
+                        {% if s.estado == "Aprobado" %}
+                            <span class="badge bg-success">Aprobado</span>
+                        {% elif s.estado == "Rechazado" %}
+                            <span class="badge bg-danger">Rechazado</span>
+                        {% else %}
+                            <span class="badge bg-warning text-dark">En revisión</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ s.fecha.strftime('%Y-%m-%d') }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% endif %}
+
+</div>
 
 {% endblock %}

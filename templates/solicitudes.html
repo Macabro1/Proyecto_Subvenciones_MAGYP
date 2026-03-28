@@ -1,50 +1,102 @@
 {% extends "base.html" %}
 {% block content %}
 
-<h2>Panel Administrador</h2>
+<div class="container mt-4">
 
-<table class="table table-bordered table-striped">
-<thead class="table-success">
-<tr>
-<th>ID</th>
-<th>Cédula</th>
-<th>Rubro</th>
-<th>Precio</th>
-<th>Subsidio</th>
-<th>Paga agricultor</th>
-<th>Estado</th>
-<th>Acciones</th>
-</tr>
-</thead>
+    <!-- 🔝 HEADER -->
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2>Panel Administrador - Solicitudes</h2>
+        <a href="{{ url_for('index') }}" class="btn btn-outline-secondary">
+            Volver
+        </a>
+    </div>
 
-<tbody>
-{% for s in solicitudes %}
-<tr>
-<td>{{ s.id }}</td>
-<td>{{ s.cedula }}</td>
-<td>{{ s.producto.nombre }}</td>
-<td>${{ s.producto.precio }}</td>
-<td>{{ s.producto.subsidio }}%</td>
-<td>${{ (s.producto.precio * (1 - s.producto.subsidio/100)) | round(2) }}</td>
+    <!-- ⚠️ VALIDACIÓN POR ROL (EXTRA SEGURIDAD FRONTEND) -->
+    {% if current_user.rol != "admin" %}
+        <div class="alert alert-danger">
+            No tienes permisos para ver esta sección.
+        </div>
+    {% else %}
 
-<td>
-<span class="
-{% if s.estado == 'Aprobado' %}text-success fw-bold
-{% elif s.estado == 'Rechazado' %}text-danger fw-bold
-{% else %}text-warning fw-bold{% endif %}
-">
-{{ s.estado }}
-</span>
-</td>
+    <!-- 📊 TABLA -->
+    <div class="card shadow">
+        <div class="card-body">
 
-<td>
-<a href="{{ url_for('cambiar_estado', id=s.id, nuevo_estado='Aprobado') }}" class="btn btn-success btn-sm">Aprobar</a>
-<a href="{{ url_for('cambiar_estado', id=s.id, nuevo_estado='Rechazado') }}" class="btn btn-danger btn-sm">Rechazar</a>
-</td>
+            <table class="table table-bordered table-hover table-striped text-center align-middle">
 
-</tr>
-{% endfor %}
-</tbody>
-</table>
+                <thead class="table-success">
+                    <tr>
+                        <th>ID</th>
+                        <th>Cédula</th>
+                        <th>Rubro</th>
+                        <th>Precio</th>
+                        <th>Subsidio</th>
+                        <th>Paga agricultor</th>
+                        <th>Estado</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                {% for s in solicitudes %}
+                <tr>
+
+                    <td>{{ s.id }}</td>
+                    <td>{{ s.cedula }}</td>
+                    <td>{{ s.producto.nombre }}</td>
+                    <td>${{ s.producto.precio }}</td>
+                    <td>{{ s.producto.subsidio }}%</td>
+
+                    <!-- 💰 CÁLCULO -->
+                    <td>
+                        ${{ (s.producto.precio * (1 - s.producto.subsidio/100)) | round(2) }}
+                    </td>
+
+                    <!-- 🎨 ESTADO -->
+                    <td>
+                        <span class="
+                        {% if s.estado == 'Aprobado' %}badge bg-success
+                        {% elif s.estado == 'Rechazado' %}badge bg-danger
+                        {% else %}badge bg-warning text-dark{% endif %}
+                        ">
+                            {{ s.estado }}
+                        </span>
+                    </td>
+
+                    <!-- ⚙️ ACCIONES -->
+                    <td>
+
+                        {% if s.estado == "En revisión" %}
+
+                            <a href="{{ url_for('cambiar_estado', id=s.id, nuevo_estado='Aprobado') }}"
+                               class="btn btn-success btn-sm">
+                                Aprobar
+                            </a>
+
+                            <a href="{{ url_for('cambiar_estado', id=s.id, nuevo_estado='Rechazado') }}"
+                               class="btn btn-danger btn-sm">
+                                Rechazar
+                            </a>
+
+                        {% else %}
+
+                            <span class="text-muted">Procesado</span>
+
+                        {% endif %}
+
+                    </td>
+
+                </tr>
+                {% endfor %}
+                </tbody>
+
+            </table>
+
+        </div>
+    </div>
+
+    {% endif %}
+
+</div>
 
 {% endblock %}
