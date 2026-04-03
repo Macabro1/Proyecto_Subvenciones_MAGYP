@@ -21,6 +21,7 @@
                         <th>Producto</th>
                         <th>Precio</th>
                         <th>Subsidio</th>
+                        <th>Valor a pagar</th> <!-- 🔥 NUEVA COLUMNA -->
                         <th>Fecha</th>
                         <th>Estado</th>
                         <th>Acción</th>
@@ -38,6 +39,11 @@
                         <td>${{ s.producto.precio }}</td>
 
                         <td>{{ s.producto.subsidio }}%</td>
+
+                        <!-- 🔥 CÁLCULO AUTOMÁTICO -->
+                        <td class="fw-bold text-success">
+                            ${{ (s.producto.precio * (1 - s.producto.subsidio / 100)) | round(2) }}
+                        </td>
 
                         <td>
                             {{ s.fecha.strftime('%d/%m/%Y %H:%M') if s.fecha else '---' }}
@@ -60,6 +66,11 @@
                                 Cancelar
                             </a>
                             {% else %}
+                            <div class="mt-3 text-end">
+    <h5 class="fw-bold text-primary">
+        Total pagado: ${{ total_pagado }}
+    </h5>
+</div>
                                 -
                             {% endif %}
                         </td>

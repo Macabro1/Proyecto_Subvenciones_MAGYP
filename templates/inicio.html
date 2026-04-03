@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+
+{% block title %}Inicio{% endblock %}
+
+{% block content %}
+
+<div class="container text-center mt-5">
+
+    <h1 class="mb-4">Bienvenido al Sistema de Subvenciones</h1>
+
+    <p class="lead">
+        Gestiona solicitudes de productos agrícolas de forma rápida y sencilla.
+    </p>
+
+    <!-- 🖼️ IMAGEN PRINCIPAL -->
+    <div class="mt-4">
+        <img src="{{ url_for('static', filename='img/agricultura.png') }}" 
+             class="img-fluid rounded shadow"
+             style="max-height: 300px;">
+    </div>
+
+    <!-- 🖼️ GALERÍA DE PRODUCTOS -->
+    <div class="row mt-5">
+
+        <div class="col-md-4">
+            <img src="{{ url_for('static', filename='img/banano.png') }}" 
+                 class="img-fluid rounded shadow w-100"
+                 style="height: 240px; object-fit: cover;">
+            <p class="mt-2 fw-bold">Banano</p>
+        </div>
+
+        <div class="col-md-4">
+            <img src="{{ url_for('static', filename='img/cafe.png') }}" 
+                 class="img-fluid rounded shadow w-100"
+                 style="height: 240px; object-fit: cover;">
+            <p class="mt-2 fw-bold">Café</p>
+        </div>
+
+        <div class="col-md-4">
+            <img src="{{ url_for('static', filename='img/arroz.png') }}" 
+                 class="img-fluid rounded shadow w-100"
+                 style="height: 240px; object-fit: cover;">
+            <p class="mt-2 fw-bold">Arroz</p>
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}

@@ -76,6 +76,12 @@
                     <td>{{ p.cantidad }}</td>
                     <td>
 
+                        <!-- EDITAR -->
+                        <a href="{{ url_for('editar_producto', id=p.id) }}" 
+                           class="btn btn-warning btn-sm">
+                           Editar
+                        </a>
+
                         <!-- ELIMINAR -->
                         <a href="{{ url_for('eliminar_producto_route', id=p.id) }}" 
                            class="btn btn-danger btn-sm"

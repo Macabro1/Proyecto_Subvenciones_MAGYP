@@ -4,36 +4,51 @@
 
 {% block content %}
 
-<div class="card shadow p-4">
+<div class="container mt-4">
 
-<h3 class="mb-3">Editar Producto</h3>
+    <div class="card shadow p-4">
 
-<form method="POST">
+        <h3 class="mb-3">Editar Producto</h3>
 
-    <div class="mb-3">
-        <label>Nombre</label>
-        <input type="text" name="nombre" class="form-control" value="{{ producto.nombre }}" required>
+        <form method="POST">
+
+            <div class="mb-3">
+                <label class="form-label">Nombre</label>
+                <input type="text" name="nombre" class="form-control" 
+                       value="{{ producto.nombre }}" required>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Precio</label>
+                <input type="number" step="0.01" min="0" name="precio" 
+                       class="form-control" value="{{ producto.precio }}" required>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Subsidio (%)</label>
+                <input type="number" min="0" name="subsidio" 
+                       class="form-control" value="{{ producto.subsidio }}" required>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Cantidad (Stock)</label>
+                <input type="number" min="0" name="cantidad" 
+                       class="form-control" value="{{ producto.cantidad }}" required>
+            </div>
+
+            <div class="d-flex gap-2">
+                <button class="btn btn-success">
+                    Actualizar
+                </button>
+
+                <a href="{{ url_for('mostrar_inventario') }}" class="btn btn-secondary">
+                    Cancelar
+                </a>
+            </div>
+
+        </form>
+
     </div>
-
-    <div class="mb-3">
-        <label>Precio</label>
-        <input type="number" step="0.01" name="precio" class="form-control" value="{{ producto.precio }}" required>
-    </div>
-
-    <div class="mb-3">
-        <label>Subsidio</label>
-        <input type="number" name="subsidio" class="form-control" value="{{ producto.subsidio }}" required>
-    </div>
-
-    <div class="mb-3">
-        <label>Cantidad</label>
-        <input type="number" name="cantidad" class="form-control" value="{{ producto.cantidad }}" required>
-    </div>
-
-    <button class="btn btn-success">Actualizar</button>
-    <a href="/inventario" class="btn btn-secondary">Cancelar</a>
-
-</form>
 
 </div>
 

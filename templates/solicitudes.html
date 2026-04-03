@@ -18,6 +18,31 @@
         </div>
     {% else %}
 
+    <!-- 🔎 FILTROS / PESTAÑAS -->
+    <div class="mb-3 text-center">
+
+        <a href="{{ url_for('listar_solicitudes') }}"
+           class="btn {{ 'btn-dark' if not estado_actual else 'btn-secondary' }}">
+            Todas
+        </a>
+
+        <a href="{{ url_for('listar_solicitudes', estado='Aprobado') }}"
+           class="btn {{ 'btn-dark' if estado_actual == 'Aprobado' else 'btn-success' }}">
+            Aprobadas
+        </a>
+
+        <a href="{{ url_for('listar_solicitudes', estado='Rechazado') }}"
+           class="btn {{ 'btn-dark' if estado_actual == 'Rechazado' else 'btn-danger' }}">
+            Rechazadas
+        </a>
+
+        <a href="{{ url_for('listar_solicitudes', estado='En revisión') }}"
+           class="btn {{ 'btn-dark' if estado_actual == 'En revisión' else 'btn-warning' }}">
+            En revisión
+        </a>
+
+    </div>
+
     <!-- 📊 TABLA -->
     <div class="card shadow">
         <div class="card-body">

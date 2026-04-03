@@ -12,7 +12,7 @@ from reportlab.platypus import SimpleDocTemplate, Table
 from datetime import datetime
 from io import BytesIO
 
-# 🔥 PERSISTENCIA
+#  PERSISTENCIA
 from inventario.persistencia import (
     guardar_txt, guardar_json, guardar_csv,
     leer_txt, leer_json, leer_csv,
@@ -122,8 +122,13 @@ def logout():
     logout_user()
     return redirect(url_for("login"))
 
-# ================= HOME =================
+# ================= NUEVA PAGINA INICIO =================
 @app.route("/")
+def inicio():
+    return render_template("inicio.html")
+
+# ================= HOME =================
+@app.route("/home")
 @login_required
 def index():
     solicitud_activa = Solicitud.query.filter_by(
@@ -180,15 +185,34 @@ def solicitar():
 @login_required
 @admin_required
 def listar_solicitudes():
-    solicitudes = Solicitud.query.all()
-    return render_template("solicitudes.html", solicitudes=solicitudes)
+    estado = request.args.get("estado")
 
+    if estado:
+        solicitudes = Solicitud.query.filter_by(estado=estado).all()
+    else:
+        solicitudes = Solicitud.query.all()
+
+    return render_template(
+        "solicitudes.html",
+        solicitudes=solicitudes,
+        estado_actual=estado
+    )
 # ================= MIS SOLICITUDES =================
 @app.route("/mis_solicitudes")
 @login_required
 def mis_solicitudes():
     solicitudes = Solicitud.query.filter_by(usuario_id=current_user.id_usuario).all()
-    return render_template("mis_solicitudes.html", solicitudes=solicitudes)
+
+    total_pagado = 0
+    for s in solicitudes:
+        if s.estado == "Aprobado" and s.producto:
+            total_pagado += s.producto.precio * (1 - s.producto.subsidio / 100)
+
+    return render_template(
+        "mis_solicitudes.html",
+        solicitudes=solicitudes,
+        total_pagado=round(total_pagado, 2)
+    )
 
 # ================= CANCELAR =================
 @app.route("/cancelar_solicitud/<int:id>")
@@ -217,8 +241,18 @@ def cambiar_estado(id, nuevo_estado):
     solicitud = db.session.get(Solicitud, id)
 
     if solicitud:
+        if nuevo_estado == "Aprobado" and solicitud.estado != "Aprobado":
+            producto = solicitud.producto
+
+            if producto.cantidad > 0:
+                producto.cantidad -= 1
+            else:
+                flash("No hay stock disponible", "danger")
+                return redirect(url_for("listar_solicitudes"))
+
         solicitud.estado = nuevo_estado
         db.session.commit()
+
         flash(f"Estado cambiado a {nuevo_estado}", "success")
     else:
         flash("Solicitud no encontrada", "danger")
@@ -297,6 +331,29 @@ def eliminar_producto_route(id):
 
     return redirect(url_for("mostrar_inventario"))
 
+# ================= EDITAR PRODUCTO =================
+@app.route("/editar_producto/<int:id>", methods=["GET", "POST"])
+@login_required
+@admin_required
+def editar_producto(id):
+    producto = db.session.get(ProductoDB, id)
+
+    if not producto:
+        flash("Producto no encontrado", "danger")
+        return redirect(url_for("mostrar_inventario"))
+
+    if request.method == "POST":
+        producto.nombre = request.form.get("nombre")
+        producto.precio = request.form.get("precio", type=float)
+        producto.subsidio = request.form.get("subsidio", type=int)
+        producto.cantidad = request.form.get("cantidad", type=int)
+
+        db.session.commit()
+        flash("Producto actualizado correctamente", "success")
+        return redirect(url_for("mostrar_inventario"))
+
+    return render_template("editar_producto.html", producto=producto)
+
 # ================= PDF =================
 @app.route("/reporte_pdf")
 @login_required
@@ -315,7 +372,7 @@ def reporte_pdf():
 
     return send_file(buffer, as_attachment=True, download_name="inventario.pdf", mimetype="application/pdf")
 
-# 🔥 FIX ERROR
+#  FIX ERROR
 @app.route("/reporte_producto_pdf")
 @login_required
 def reporte_producto_pdf():
@@ -330,13 +387,30 @@ def reporte_sexo_pdf():
     buffer = BytesIO()
     doc = SimpleDocTemplate(buffer)
 
-    data = [["Producto", "Cédula", "Sexo", "Fecha", "Estado"]]
+    data = [["Producto", "Cédula", "Sexo", "Valor", "Fecha", "Estado"]]
+
     for s in solicitudes:
+        productor = db.session.execute(
+            db.text("""
+                SELECT sexo
+                FROM productores
+                WHERE cedula = :cedula
+            """),
+            {"cedula": s.cedula}
+        ).fetchone()
+
+        sexo = productor[0] if productor else ""
+
+        valor = 0
+        if s.producto:
+            valor = s.producto.precio * (1 - s.producto.subsidio / 100)
+
         data.append([
             s.producto.nombre if s.producto else "",
             s.cedula,
-            getattr(s, "sexo", ""),
-            s.fecha.strftime("%Y-%m-%d"),
+            sexo,
+            round(valor, 2),
+            s.fecha.strftime("%Y-%m-%d") if s.fecha else "",
             s.estado
         ])
 
@@ -355,11 +429,23 @@ def reporte_provincia_pdf():
     doc = SimpleDocTemplate(buffer)
 
     data = [["Producto", "Cédula", "Provincia", "Fecha", "Estado"]]
+
     for s in solicitudes:
+        productor = db.session.execute(
+            db.text("""
+                SELECT provincia
+                FROM productores
+                WHERE cedula = :cedula
+            """),
+            {"cedula": s.cedula}
+        ).fetchone()
+
+        provincia = productor[0] if productor else ""
+
         data.append([
             s.producto.nombre if s.producto else "",
             s.cedula,
-            getattr(s, "provincia", ""),
+            provincia,
             s.fecha.strftime("%Y-%m-%d"),
             s.estado
         ])
@@ -405,7 +491,7 @@ def limpiar_datos():
     flash("Datos eliminados", "success")
     return redirect(url_for("mostrar_datos"))
 
-# ================= BUSCAR  =================
+# ================= BUSCAR =================
 @app.route("/buscar", methods=["GET", "POST"])
 @login_required
 def buscar():
@@ -420,6 +506,38 @@ def buscar():
             ).all()
 
     return render_template("buscar.html", resultados=resultados)
+# ================= REPORTES =================
+@app.route("/reportes")
+@login_required
+@admin_required
+def reportes():
+    por_provincia = db.session.execute(db.text("""
+        SELECT p.provincia, COUNT(*) as total
+        FROM solicitudes s
+        JOIN productores p ON s.cedula = p.cedula
+        GROUP BY p.provincia
+    """)).fetchall()
+
+    por_sexo = db.session.execute(db.text("""
+        SELECT p.sexo, COUNT(*) as total
+        FROM solicitudes s
+        JOIN productores p ON s.cedula = p.cedula
+        GROUP BY p.sexo
+    """)).fetchall()
+
+    por_producto = db.session.execute(db.text("""
+        SELECT pr.nombre, COUNT(*) as total
+        FROM solicitudes s
+        JOIN productos pr ON s.producto_id = pr.id
+        GROUP BY pr.nombre
+    """)).fetchall()
+
+    return render_template(
+        "reportes.html",
+        por_provincia=por_provincia,
+        por_sexo=por_sexo,
+        por_producto=por_producto
+    )
 
 # ================= RUN =================
 if __name__ == "__main__":
