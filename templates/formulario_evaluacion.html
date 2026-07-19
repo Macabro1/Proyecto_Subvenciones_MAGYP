@@ -1,0 +1,149 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container mt-4">
+
+<h3>Evaluar Solicitud</h3>
+
+<form method="POST">
+
+```
+<!-- ================= OBSERVACIONES ================= -->
+<div class="mb-3">
+    <label>Observaciones</label>
+    <textarea name="observaciones" class="form-control"></textarea>
+</div>
+
+<!-- ================= EVALUACIÓN AUTOMÁTICA ================= -->
+<h5>Evaluación Rápida</h5>
+
+<div class="form-check form-switch mb-2">
+    <input class="form-check-input switch-eval" type="checkbox" data-puntos="30" name="cedula_vigente">
+    <label class="form-check-label">Cédula vigente (30 pts)</label>
+</div>
+
+<div class="form-check form-switch mb-2">
+    <input class="form-check-input switch-eval" type="checkbox" data-puntos="20" name="firma_documentos">
+    <label class="form-check-label">Firma documentos (20 pts)</label>
+</div>
+
+<div class="form-check form-switch mb-2">
+    <input class="form-check-input switch-eval" type="checkbox" data-puntos="25" name="documentos_completos">
+    <label class="form-check-label">Documentación completa (25 pts)</label>
+</div>
+
+<div class="form-check form-switch mb-2">
+    <input class="form-check-input switch-eval" type="checkbox" data-puntos="15" name="historial">
+    <label class="form-check-label">Historial crediticio favorable (15 pts)</label>
+</div>
+
+<div class="form-check form-switch mb-3">
+    <input class="form-check-input switch-eval" type="checkbox" data-puntos="10" name="ubicacion">
+    <label class="form-check-label">Ubicación válida (10 pts)</label>
+</div>
+
+<!-- ================= BARRA DINÁMICA ================= -->
+<label>Puntaje:</label>
+<div class="progress mb-3">
+    <div class="progress-bar" id="barra" style="width: 0%">0 pts</div>
+</div>
+
+<div class="mb-3">
+    <strong>Resultado:</strong>
+    <span id="resultado" class="badge bg-secondary">EN PROCESO</span>
+</div>
+
+<hr>
+
+<!-- ================= CRITERIOS MANUALES ================= -->
+<h5>Criterios adicionales (opcional)</h5>
+
+<table class="table table-bordered" id="tablaCriterios">
+    <thead class="table-dark">
+        <tr>
+            <th>Criterio</th>
+            <th>Descripción</th>
+            <th>Puntaje</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody></tbody>
+</table>
+
+<button type="button" class="btn btn-secondary" onclick="agregarFila()">
+    + Agregar criterio
+</button>
+
+<hr>
+
+<button type="submit" class="btn btn-success">
+    Guardar Evaluación
+</button>
+```
+
+</form>
+
+</div>
+
+<!-- ================= JS DINÁMICO ================= -->
+
+<script>
+const switches = document.querySelectorAll('.switch-eval');
+const barra = document.getElementById('barra');
+const resultado = document.getElementById('resultado');
+
+function calcular() {
+    let total = 0;
+    let maximo = 0;
+
+    switches.forEach(sw => {
+        let puntos = parseInt(sw.dataset.puntos);
+        maximo += puntos;
+
+        if (sw.checked) total += puntos;
+    });
+
+    let porcentaje = (total / maximo) * 100;
+
+    barra.style.width = porcentaje + "%";
+    barra.innerText = total + " / " + maximo + " pts";
+
+    if (total >= 70) {
+        barra.className = "progress-bar bg-success";
+        resultado.className = "badge bg-success";
+        resultado.innerText = "APROBADO";
+    } else if (total >= 40) {
+        barra.className = "progress-bar bg-warning";
+        resultado.className = "badge bg-warning";
+        resultado.innerText = "EN PROCESO";
+    } else {
+        barra.className = "progress-bar bg-danger";
+        resultado.className = "badge bg-danger";
+        resultado.innerText = "RECHAZADO";
+    }
+}
+
+switches.forEach(sw => {
+    sw.addEventListener('change', calcular);
+});
+
+function agregarFila() {
+    let tabla = document.getElementById("tablaCriterios").getElementsByTagName('tbody')[0];
+
+    let fila = tabla.insertRow();
+
+    fila.innerHTML = `
+        <td><input type="text" name="criterio[]" class="form-control"></td>
+        <td><input type="text" name="descripcion[]" class="form-control"></td>
+        <td><input type="number" name="puntaje[]" class="form-control"></td>
+        <td><button type="button" class="btn btn-danger" onclick="eliminarFila(this)">X</button></td>
+    `;
+}
+
+function eliminarFila(btn) {
+    btn.closest('tr').remove();
+}
+</script>
+
+{% endblock %}

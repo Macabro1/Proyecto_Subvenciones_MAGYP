@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container mt-4">
+
+    <!-- 🔝 TÍTULO -->
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2>📋 Detalle del Beneficiario</h2>
+        <a href="{{ url_for('listar_solicitudes') }}" class="btn btn-outline-secondary">
+            ⬅ Volver
+        </a>
+    </div>
+
+    <div class="card shadow p-4">
+
+        <!-- 👤 PRODUCTOR -->
+        <h4 class="text-success">👤 Información del Productor</h4>
+        <hr>
+
+        {% if productor %}
+        <div class="row">
+            <div class="col-md-6">
+                <p><strong>Nombres:</strong> {{ productor[0] }}</p>
+                <p><strong>Apellidos:</strong> {{ productor[1] }}</p>
+                <p><strong>Sexo:</strong> 
+                    <span class="badge bg-info text-dark">{{ productor[5] }}</span>
+                </p>
+            </div>
+
+            <div class="col-md-6">
+                <p><strong>Provincia:</strong> {{ productor[2] }}</p>
+                <p><strong>Cantón:</strong> {{ productor[3] }}</p>
+                <p><strong>Parroquia:</strong> {{ productor[4] }}</p>
+            </div>
+        </div>
+        {% else %}
+        <div class="alert alert-danger">
+            ❌ No se encontró información del productor
+        </div>
+        {% endif %}
+
+        <!-- 📊 EVALUACIÓN -->
+        <h4 class="mt-4 text-primary">📊 Evaluación de la Solicitud</h4>
+        <hr>
+
+        {% if evaluacion %}
+        <div class="row">
+            <div class="col-md-6">
+                <p><strong>Observaciones:</strong></p>
+                <div class="alert alert-secondary">
+                    {{ evaluacion[1] }}
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <p><strong>Puntaje:</strong> 
+                    <span class="badge bg-dark">{{ evaluacion[2] }}</span>
+                </p>
+
+                <p><strong>Resultado:</strong></p>
+                <span class="badge fs-6
+                    {% if evaluacion[3] == 'APROBADO' %}bg-success
+                    {% elif evaluacion[3] == 'RECHAZADO' %}bg-danger
+                    {% else %}bg-warning text-dark{% endif %}
+                ">
+                    {{ evaluacion[3] }}
+                </span>
+            </div>
+        </div>
+
+        <!-- 🔐 FIRMA DIGITAL -->
+        <div class="mt-4">
+            <h5>🔐 Firma Digital</h5>
+
+            <div class="alert alert-light border">
+                <small style="word-break: break-all;">
+                    {{ evaluacion[4] }}
+                </small>
+            </div>
+
+            <!-- 📱 QR -->
+            {% if qr_base64 %}
+            <div class="text-center mt-3">
+                <p><strong>QR de Verificación</strong></p>
+                <img src="data:image/png;base64,{{ qr_base64 }}" width="200">
+            </div>
+            {% endif %}
+
+            <!-- 🔍 BOTÓN VERIFICAR (CORREGIDO) -->
+            <div class="text-center mt-3">
+                <a href="{{ url_for('verificar_firma', firma=evaluacion[4]) }}" 
+                   class="btn btn-dark">
+                    🔍 Verificar Autenticidad
+                </a>
+            </div>
+        </div>
+
+        {% else %}
+        <div class="alert alert-warning">
+            ⚠️ Sin evaluación registrada
+        </div>
+        {% endif %}
+
+    </div>
+
+</div>
+
+{% endblock %}

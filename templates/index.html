@@ -6,7 +6,6 @@
 
 <div class="container mt-4">
 
-```
 <!-- 👋 USUARIO -->
 <div class="mb-3 text-end">
     <strong>Usuario:</strong> {{ current_user.nombre }} |
@@ -52,11 +51,29 @@
                     </datalist>
                 </div>
 
+                <!-- 🔥 NUEVO: SUBSIDIO -->
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Programa de Subsidio</label>
+
+                    <select id="subsidio"
+                            class="form-select"
+                            {% if solicitud_activa %}disabled{% endif %}>
+
+                        <option value="">Seleccione...</option>
+
+                        {% for s in subsidios %}
+                        <option value="{{ s[0] }}">{{ s[1] }}</option>
+                        {% endfor %}
+
+                    </select>
+                </div>
+
                 <!-- PRODUCTO -->
                 <div class="col-md-6 mb-3">
                     <label class="form-label">Rubro</label>
 
                     <select name="producto_id"
+                            id="producto"
                             class="form-select"
                             required
                             {% if solicitud_activa %}disabled{% endif %}>
@@ -164,12 +181,10 @@
 
 </div>
 {% endif %}
-```
 
 </div>
 
-<!-- 🔥 AUTOCOMPLETADO CORREGIDO -->
-
+<!-- 🔥 AUTOCOMPLETADO -->
 <script>
 document.getElementById("cedula").addEventListener("blur", function() {
 
@@ -196,11 +211,39 @@ document.getElementById("cedula").addEventListener("blur", function() {
 
     })
     .catch(() => {
-
         alert("⚠️ Productor no encontrado");
+    });
+});
 
-        ["nombres","apellidos","correo","telefono","provincia","canton","parroquia","sexo"]
-        .forEach(id => document.getElementById(id).value = "");
+
+// 🔥 NUEVO: FILTRO POR SUBSIDIO
+document.getElementById("subsidio").addEventListener("change", function() {
+
+    let codigo = this.value;
+
+    fetch(`/obtener_productos_por_subsidio?codigo=${codigo}`)
+    .then(res => res.json())
+    .then(data => {
+
+        let select = document.getElementById("producto");
+
+        // Limpiar select
+        select.innerHTML = "";
+
+        if (data.length === 0) {
+            // 🚫 NO HAY PRODUCTOS
+            select.innerHTML = `<option value="">No hay rubros disponibles</option>`;
+            select.disabled = true;
+        } else {
+            // ✅ HAY PRODUCTOS
+            select.disabled = false;
+            select.innerHTML = `<option value="">Seleccione...</option>`;
+
+            data.forEach(p => {
+                select.innerHTML += `<option value="${p.id}">${p.nombre}</option>`;
+            });
+        }
+
     });
 });
 </script>
